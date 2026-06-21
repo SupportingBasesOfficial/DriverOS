@@ -12,9 +12,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
+      - name: Install psql
+        run: sudo apt-get install -y postgresql-client
 
       - name: Run migrations
-        run: supabase db push --db-url "${{ secrets.SUPABASE_DB_URL }}"
+        run: |
+          for f in $(ls supabase/migrations/*.sql | sort); do
+            echo "Applying $f..."
+            psql "${{ secrets.SUPABASE_DB_URL }}" -f "$f"
+          done
