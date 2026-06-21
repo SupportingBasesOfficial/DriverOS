@@ -23,6 +23,11 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      - name: Mark pre-existing remote migrations as applied
+        run: supabase migration repair --status applied 20260509000001 20260620000001 20260620000002 20260620000003 20260620000004
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
       - name: Run migrations
         run: supabase db push --password ${{ secrets.SUPABASE_DB_PASSWORD }}
         env:
