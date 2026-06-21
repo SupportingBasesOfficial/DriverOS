@@ -27,20 +27,18 @@ export default function RootLayout() {
     if (loading) return;
     const inAuth = segments[0] === "(auth)";
     const inOnboarding = segments[0] === "(onboarding)";
+    const inApp = segments[0] === "(app)";
 
     if (!session) {
       if (!inAuth) router.replace("/(auth)/login");
       return;
     }
 
-    if (inAuth) {
-      checkOnboarding();
-      return;
-    }
+    // Already in the right place — don't redirect, avoids infinite loop
+    if (inApp || inOnboarding) return;
 
-    if (!inOnboarding && !inAuth) {
-      checkOnboarding();
-    }
+    // Authenticated but at root or coming from auth → decide where to send
+    checkOnboarding();
   }, [session, loading, segments]);
 
   async function checkOnboarding() {

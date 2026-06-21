@@ -70,10 +70,23 @@ export default function FinanceiroScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // First get the user's vehicle IDs to filter related records correctly
+    const { data: userVehicles } = await supabase
+      .from("vehicles")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "active");
+
+    const vehicleIds = (userVehicles ?? []).map((v: { id: string }) => v.id);
+
     const [{ data: r }, { data: m }, { data: e }] = await Promise.all([
       supabase.from("refuelings").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(30),
-      supabase.from("maintenances").select("*").order("performed_at", { ascending: false }).limit(30),
-      supabase.from("vehicle_expenses").select("*").order("due_date", { ascending: true }).limit(50),
+      vehicleIds.length > 0
+        ? supabase.from("maintenances").select("*").in("vehicle_id", vehicleIds).order("performed_at", { ascending: false }).limit(30)
+        : Promise.resolve({ data: [] as Maintenance[], error: null }),
+      vehicleIds.length > 0
+        ? supabase.from("vehicle_expenses").select("*").in("vehicle_id", vehicleIds).order("due_date", { ascending: true }).limit(50)
+        : Promise.resolve({ data: [] as Expense[], error: null }),
     ]);
 
     setRefuelings(r ?? []);
@@ -85,9 +98,9 @@ export default function FinanceiroScreen() {
 
   const onRefresh = () => { setRefreshing(true); loadAll(); };
 
-  const totalRefueling = refuelings.reduce((s, r) => s + r.total_cost, 0);
-  const totalMaintenance = maintenances.reduce((s, m) => s + (m.cost ?? 0), 0);
-  const totalExpenses = expenses.filter(e => e.status === "paid").reduce((s, e) => s + e.amount, 0);
+  const totalRefueling = refuelings.reduce((s: number, r: Refueling) => s + r.total_cost, 0);
+  const totalMaintenance = maintenances.reduce((s: number, m: Maintenance) => s + (m.cost ?? 0), 0);
+  const totalExpenses = expenses.filter((e: Expense) => e.status === "paid").reduce((s: number, e: Expense) => s + e.amount, 0);
 
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -135,13 +148,13 @@ export default function FinanceiroScreen() {
       {tab === "refuelings" && (
         <>
           <AddButton label="+ Novo abastecimento" onPress={() => router.push("/(app)/refueling-add")} />
-          <FlatList
+          <FlatList<Refueling>
             data={refuelings}
-            keyExtractor={i => i.id}
+            keyExtractor={(i: Refueling) => i.id}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}
             contentContainerStyle={{ padding: 16, gap: 10, paddingTop: 4 }}
             ListEmptyComponent={<Empty label="Nenhum abastecimento registrado." />}
-            renderItem={({ item }) => (
+            renderItem={({ item }: { item: Refueling }) => (
               <View style={{ backgroundColor: "#1e293b", borderRadius: 12, padding: 14, flexDirection: "row", justifyContent: "space-between" }}>
                 <View style={{ gap: 2 }}>
                   <Text style={{ color: "#f8fafc", fontWeight: "600" }}>⛽ {item.liters.toFixed(2)} L</Text>
@@ -162,13 +175,13 @@ export default function FinanceiroScreen() {
       {tab === "maintenances" && (
         <>
           <AddButton label="+ Nova manutenção" onPress={() => router.push("/(app)/maintenance-add")} />
-          <FlatList
+          <FlatList<Maintenance>
             data={maintenances}
-            keyExtractor={i => i.id}
+            keyExtractor={(i: Maintenance) => i.id}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}
             contentContainerStyle={{ padding: 16, gap: 10, paddingTop: 4 }}
             ListEmptyComponent={<Empty label="Nenhuma manutenção registrada." />}
-            renderItem={({ item }) => (
+            renderItem={({ item }: { item: Maintenance }) => (
               <View style={{ backgroundColor: "#1e293b", borderRadius: 12, padding: 14, flexDirection: "row", justifyContent: "space-between" }}>
                 <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
                   <Text style={{ color: "#f8fafc", fontWeight: "600" }}>🔧 {MAINTENANCE_LABEL[item.type]}</Text>
@@ -183,13 +196,13 @@ export default function FinanceiroScreen() {
       )}
 
       {tab === "expenses" && (
-        <FlatList
+        <FlatList<Expense>
           data={expenses}
-          keyExtractor={i => i.id}
+          keyExtractor={(i: Expense) => i.id}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}
           contentContainerStyle={{ padding: 16, gap: 10, paddingTop: 4 }}
           ListEmptyComponent={<Empty label="Nenhuma despesa cadastrada." />}
-          renderItem={({ item }) => (
+          renderItem={({ item }: { item: Expense }) => (
             <View style={{ backgroundColor: "#1e293b", borderRadius: 12, padding: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
                 <Text style={{ color: "#f8fafc", fontWeight: "600" }}>📄 {EXPENSE_LABEL[item.category]}</Text>

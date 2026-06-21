@@ -10,10 +10,11 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 
 export default function RegisterScreen() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,7 +41,11 @@ export default function RegisterScreen() {
       return;
     }
     if (data.user && !data.session) {
-      Alert.alert("Confirme seu e-mail", "Enviamos um link de confirmação para " + email);
+      Alert.alert(
+        "Confirme seu e-mail",
+        "Enviamos um link de confirmação para " + email + ". Após confirmar, faça login.",
+        [{ text: "Ir para login", onPress: () => router.replace("/(auth)/login") }]
+      );
     }
   }
 

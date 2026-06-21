@@ -32,7 +32,8 @@ export default function ShiftScreen() {
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [todayTrips, setTodayTrips] = useState<Trip[]>([]);
-  const [odometer, setOdometer] = useState("");
+  const [startOdometer, setStartOdometer] = useState("");
+  const [endOdometer, setEndOdometer] = useState("");
   const [fareModal, setFareModal] = useState(false);
   const [fareInput, setFareInput] = useState("");
 
@@ -67,7 +68,7 @@ export default function ShiftScreen() {
   }
 
   async function startShift() {
-    if (!odometer) { Alert.alert("Informe o hodômetro inicial."); return; }
+    if (!startOdometer) { Alert.alert("Informe o hodômetro inicial."); return; }
     if (!vehicle) { Alert.alert("Cadastre um veículo primeiro."); return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -75,30 +76,35 @@ export default function ShiftScreen() {
     const { error } = await supabase.from("shifts").insert({
       user_id: user.id,
       vehicle_id: vehicle.id,
-      initial_odometer_km: parseFloat(odometer),
+      initial_odometer_km: parseFloat(startOdometer),
       status: "active",
     });
     setActionLoading(false);
     if (error) { Alert.alert("Erro", error.message); return; }
-    setOdometer("");
+    setStartOdometer("");
     loadData();
   }
 
   async function endShift() {
     if (!activeShift) return;
-    if (!odometer) { Alert.alert("Informe o hodômetro final."); return; }
+    if (!endOdometer) { Alert.alert("Informe o hodômetro final."); return; }
     Alert.alert("Encerrar turno?", "Confirma o encerramento do turno?", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Encerrar", style: "destructive", onPress: async () => {
           setActionLoading(true);
+          const { data: { user } } = await supabase.auth.getUser();
           await supabase.from("shifts").update({
             status: "completed",
             ended_at: new Date().toISOString(),
-            final_odometer_km: parseFloat(odometer),
+            final_odometer_km: parseFloat(endOdometer),
           }).eq("id", activeShift.id);
+          if (user) {
+            const today = new Date().toISOString().split("T")[0];
+            await supabase.rpc("snapshot_daily_update", { p_user_id: user.id, p_date: today });
+          }
           setActionLoading(false);
-          setOdometer("");
+          setEndOdometer("");
           loadData();
         },
       },
@@ -189,8 +195,8 @@ export default function ShiftScreen() {
             <Text style={{ color: "#ef4444" }}>Nenhum veículo ativo. Cadastre um veículo.</Text>
           )}
           <TextInput
-            value={odometer}
-            onChangeText={setOdometer}
+            value={startOdometer}
+            onChangeText={setStartOdometer}
             placeholder="Hodômetro inicial (km)"
             placeholderTextColor="#475569"
             keyboardType="decimal-pad"
@@ -251,8 +257,8 @@ export default function ShiftScreen() {
           <View style={{ gap: 8, marginTop: 8 }}>
             <Text style={{ color: "#94a3b8", fontSize: 13, fontWeight: "600" }}>ENCERRAR TURNO</Text>
             <TextInput
-              value={odometer}
-              onChangeText={setOdometer}
+              value={endOdometer}
+              onChangeText={setEndOdometer}
               placeholder="Hodômetro final (km)"
               placeholderTextColor="#475569"
               keyboardType="decimal-pad"

@@ -503,7 +503,7 @@ export type Database = {
     Functions: {
       snapshot_daily_update: {
         Args: { p_user_id: string; p_date: string };
-        Returns: undefined;
+        Returns: void;
       };
     };
     Enums: {

@@ -49,7 +49,7 @@ export default function AppLayout() {
         options={{
           title: "Perfil",
           tabBarLabel: "Perfil",
-          tabBarIcon: ({ focused }) => <Icon label={focused ? "👤" : "👤"} />,
+          tabBarIcon: () => <Icon label="👤" />,
         }}
       />
     </Tabs>
