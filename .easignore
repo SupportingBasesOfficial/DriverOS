@@ -7,4 +7,8 @@ scripts/
 node_modules/
 .next/
 dist/
+dist-test/
 .turbo/
+_temp_backup/
+mobile20/
+metro-runtime-fix/
