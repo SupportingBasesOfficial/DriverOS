@@ -1,10 +1,12 @@
 name: Supabase Migrate
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'supabase/migrations/**'
+      - '.github/workflows/migrate.yml'
 
 jobs:
   migrate:
