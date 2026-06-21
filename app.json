@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "DriverOS",
+    "slug": "driveros",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.supportingbases.driveros"
+    },
+    "android": {
+      "package": "com.supportingbases.driveros"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "root": "./src/app"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "5c659be3-2a37-4682-b580-5bd6b1a12d43"
+      }
+    },
+    "owner": "mauricioreuterneto"
+  }
+}

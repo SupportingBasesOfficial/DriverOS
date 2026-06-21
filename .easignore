@@ -1,0 +1,10 @@
+packages/
+scripts/
+.github/
+.vscode/
+*.md
+*.log
+node_modules/
+.next/
+dist/
+.turbo/
