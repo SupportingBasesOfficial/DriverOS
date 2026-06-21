@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import type { Tables } from "../../lib/database.types";
 
@@ -7,6 +8,7 @@ type Profile = Tables<"profiles">;
 type Vehicle = Tables<"vehicles">;
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,12 +100,21 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
-      <Text style={{ color: "#94a3b8", fontSize: 13, fontWeight: "600", marginTop: 8 }}>VEÍCULOS</Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+        <Text style={{ color: "#94a3b8", fontSize: 13, fontWeight: "600" }}>VEÍCULOS</Text>
+        <Pressable onPress={() => router.push("/(app)/vehicle-add")}>
+          <Text style={{ color: "#3b82f6", fontSize: 13, fontWeight: "600" }}>+ Adicionar</Text>
+        </Pressable>
+      </View>
 
       {vehicles.length === 0 ? (
-        <Text style={{ color: "#475569", textAlign: "center", paddingVertical: 16 }}>
-          Nenhum veículo cadastrado.
-        </Text>
+        <Pressable
+          onPress={() => router.push("/(app)/vehicle-add")}
+          style={{ backgroundColor: "#1e293b", borderRadius: 12, padding: 20, alignItems: "center", borderWidth: 1, borderColor: "#334155", borderStyle: "dashed" }}
+        >
+          <Text style={{ fontSize: 28 }}>🚗</Text>
+          <Text style={{ color: "#3b82f6", marginTop: 8, fontWeight: "600" }}>Adicionar veículo</Text>
+        </Pressable>
       ) : (
         vehicles.map(v => (
           <View key={v.id} style={{ backgroundColor: "#1e293b", borderRadius: 12, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>

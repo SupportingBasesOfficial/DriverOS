@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -32,6 +33,8 @@ export default function ShiftScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [todayTrips, setTodayTrips] = useState<Trip[]>([]);
   const [odometer, setOdometer] = useState("");
+  const [fareModal, setFareModal] = useState(false);
+  const [fareInput, setFareInput] = useState("");
 
   useEffect(() => {
     loadData();
@@ -132,17 +135,13 @@ export default function ShiftScreen() {
   }
 
   function promptEndTrip() {
-    Alert.prompt(
-      "Encerrar viagem",
-      "Valor recebido (R$) — deixe vazio se não aplicável:",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Encerrar", onPress: (val) => endTrip(val ? parseFloat(val.replace(",", ".")) : undefined) },
-      ],
-      "plain-text",
-      "",
-      "decimal-pad",
-    );
+    setFareInput("");
+    setFareModal(true);
+  }
+
+  function confirmEndTrip() {
+    setFareModal(false);
+    endTrip(fareInput ? parseFloat(fareInput.replace(",", ".")) : undefined);
   }
 
   if (loading) {
@@ -154,6 +153,32 @@ export default function ShiftScreen() {
   }
 
   return (
+    <>
+      <Modal visible={fareModal} transparent animationType="fade" onRequestClose={() => setFareModal(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <View style={{ backgroundColor: "#1e293b", borderRadius: 16, padding: 24, width: "100%", gap: 16 }}>
+            <Text style={{ color: "#f8fafc", fontSize: 18, fontWeight: "bold" }}>Encerrar viagem</Text>
+            <Text style={{ color: "#94a3b8" }}>Valor recebido (R$) — deixe vazio se não aplicável:</Text>
+            <TextInput
+              value={fareInput}
+              onChangeText={setFareInput}
+              placeholder="0,00"
+              placeholderTextColor="#475569"
+              keyboardType="decimal-pad"
+              autoFocus
+              style={{ backgroundColor: "#0f172a", color: "#f8fafc", borderRadius: 10, padding: 14, fontSize: 18, borderWidth: 1, borderColor: "#334155", textAlign: "center" }}
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable onPress={() => setFareModal(false)} style={{ flex: 1, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: "#334155", alignItems: "center" }}>
+                <Text style={{ color: "#94a3b8", fontWeight: "600" }}>Cancelar</Text>
+              </Pressable>
+              <Pressable onPress={confirmEndTrip} style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: "#ef4444", alignItems: "center" }}>
+                <Text style={{ color: "#fff", fontWeight: "600" }}>Encerrar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     <ScrollView style={{ flex: 1, backgroundColor: "#0f172a" }} contentContainerStyle={{ padding: 16, gap: 16 }}>
       {!activeShift ? (
         <View style={{ gap: 12 }}>
@@ -244,5 +269,6 @@ export default function ShiftScreen() {
         </View>
       )}
     </ScrollView>
+    </>
   );
 }

@@ -21,7 +21,7 @@ export default function AppLayout() {
         options={{
           title: "Dashboard",
           tabBarLabel: "Início",
-          tabBarIcon: ({ focused }) => <Icon label={focused ? "🏠" : "🏠"} />,
+          tabBarIcon: () => <Icon label="🏠" />,
         }}
       />
       <Tabs.Screen
@@ -29,17 +29,21 @@ export default function AppLayout() {
         options={{
           title: "Turno",
           tabBarLabel: "Turno",
-          tabBarIcon: ({ focused }) => <Icon label={focused ? "🚗" : "🚗"} />,
+          tabBarIcon: () => <Icon label="🚗" />,
         }}
       />
       <Tabs.Screen
-        name="history"
+        name="financeiro"
         options={{
-          title: "Histórico",
-          tabBarLabel: "Histórico",
-          tabBarIcon: ({ focused }) => <Icon label={focused ? "📋" : "📋"} />,
+          title: "Financeiro",
+          tabBarLabel: "Financeiro",
+          tabBarIcon: () => <Icon label="💰" />,
         }}
       />
+      <Tabs.Screen name="history" options={{ href: null }} />
+      <Tabs.Screen name="vehicle-add" options={{ href: null }} />
+      <Tabs.Screen name="refueling-add" options={{ href: null }} />
+      <Tabs.Screen name="maintenance-add" options={{ href: null }} />
       <Tabs.Screen
         name="profile"
         options={{

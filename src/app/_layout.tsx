@@ -26,12 +26,38 @@ export default function RootLayout() {
   useEffect(() => {
     if (loading) return;
     const inAuth = segments[0] === "(auth)";
-    if (!session && !inAuth) {
-      router.replace("/(auth)/login");
-    } else if (session && inAuth) {
-      router.replace("/(app)");
+    const inOnboarding = segments[0] === "(onboarding)";
+
+    if (!session) {
+      if (!inAuth) router.replace("/(auth)/login");
+      return;
+    }
+
+    if (inAuth) {
+      checkOnboarding();
+      return;
+    }
+
+    if (!inOnboarding && !inAuth) {
+      checkOnboarding();
     }
   }, [session, loading, segments]);
+
+  async function checkOnboarding() {
+    if (!session) return;
+    const { data } = await supabase
+      .from("vehicles")
+      .select("id")
+      .eq("user_id", session.user.id)
+      .eq("status", "active")
+      .limit(1);
+
+    if (!data || data.length === 0) {
+      router.replace("/(onboarding)/vehicle");
+    } else {
+      router.replace("/(app)");
+    }
+  }
 
   if (loading) {
     return (

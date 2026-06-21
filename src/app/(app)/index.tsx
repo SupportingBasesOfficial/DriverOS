@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import type { Tables } from "../../lib/database.types";
 
@@ -17,6 +18,7 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 }
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,6 +112,14 @@ export default function DashboardScreen() {
           </Text>
         </View>
       )}
+
+      <Pressable
+        onPress={() => router.push("/(app)/history")}
+        style={{ backgroundColor: "#1e293b", borderRadius: 12, padding: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}
+      >
+        <Text style={{ color: "#f8fafc", fontWeight: "600" }}>📋 Histórico de turnos</Text>
+        <Text style={{ color: "#94a3b8" }}>→</Text>
+      </Pressable>
     </ScrollView>
   );
 }
