@@ -30,6 +30,7 @@ const TRIP_CATEGORIES: { value: Tables<"trips">["category"]; label: string; icon
 ];
 
 export default function ShiftScreen() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
@@ -362,6 +363,12 @@ export default function ShiftScreen() {
                 style={{ backgroundColor: "#7f1d1d", borderRadius: 12, padding: 16, alignItems: "center", opacity: (actionLoading || !!activeTrip) ? 0.5 : 1 }}
               >
                 <Text style={{ color: "#fca5a5", fontSize: 16, fontWeight: "600" }}>⏹ Encerrar turno</Text>
+              </Pressable>
+            )}
+            {!activeTrip && (
+              <Pressable onPress={() => router.push("/(app)/trip-add")}
+                style={{ backgroundColor: "#064e3b", borderRadius: 12, padding: 16, alignItems: "center", borderWidth: 1, borderColor: "#059669" }}>
+                <Text style={{ color: "#34d399", fontSize: 16, fontWeight: "600" }}>📝 Registrar corrida manual</Text>
               </Pressable>
             )}
           </View>

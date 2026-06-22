@@ -453,6 +453,12 @@ export default function DashboardScreen() {
           <Text style={{ fontSize: 20 }}>🔧</Text>
           <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "700" }}>Manutenção</Text>
         </Pressable>
+        <Pressable onPress={() => router.push("/(app)/trip-add")}
+          style={{ flex: 1, backgroundColor: "#1e293b", borderRadius: 12, padding: 14, alignItems: "center",
+            gap: 4, borderWidth: 1, borderColor: "#334155" }}>
+          <Text style={{ fontSize: 20 }}>📝</Text>
+          <Text style={{ color: "#22c55e", fontSize: 12, fontWeight: "700" }}>Corrida</Text>
+        </Pressable>
       </View>
 
       <Pressable onPress={() => router.push("/(app)/history")}
