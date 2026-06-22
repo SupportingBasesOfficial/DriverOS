@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Pressable, Share, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import type { Tables } from "../../lib/database.types";
@@ -147,6 +147,32 @@ export default function HistoryScreen() {
   }, 0);
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  async function exportCsv() {
+    if (shifts.length === 0) {
+      Alert.alert("Sem dados", "Não há turnos no período selecionado para exportar.");
+      return;
+    }
+    const header = "Data,Início,Fim,Km Inicial,Km Final,Km Rodados,Nº Viagens,Ganhos (R$),Status";
+    const rows = shifts.map((sh: Shift) => {
+      const date = new Date(sh.started_at).toLocaleDateString("pt-BR");
+      const start = new Date(sh.started_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const end = sh.ended_at ? new Date(sh.ended_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
+      const kmIni = sh.initial_odometer_km?.toFixed(0) ?? "";
+      const kmFin = sh.final_odometer_km?.toFixed(0) ?? "";
+      const km = sh.final_odometer_km && sh.initial_odometer_km
+        ? Math.max(0, sh.final_odometer_km - sh.initial_odometer_km).toFixed(0) : "";
+      const trips = sh.trips.length;
+      const earnings = sh.trips.reduce((s: number, tr: Tables<"trips">) => s + (tr.fare_amount ?? 0), 0).toFixed(2);
+      return `${date},${start},${end},${kmIni},${kmFin},${km},${trips},${earnings},${sh.status}`;
+    });
+    const csv = [header, ...rows].join("\n");
+    try {
+      await Share.share({ message: csv, title: "DriverOS - Histórico de Turnos" });
+    } catch (e) {
+      console.error("[exportCsv]", e);
+    }
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: "#0f172a" }}>
       {/* Period filter */}
@@ -163,9 +189,15 @@ export default function HistoryScreen() {
         ))}
       </View>
 
-      {/* Period summary */}
+      {/* Period summary + export */}
       {!loading && shifts.length > 0 && (
-        <View style={{ flexDirection: "row", marginHorizontal: 16, marginBottom: 8, backgroundColor: "#1e293b", borderRadius: 12, padding: 14, gap: 16 }}>
+        <View style={{ marginHorizontal: 16, marginBottom: 8, gap: 8 }}>
+        <Pressable onPress={exportCsv}
+          style={{ backgroundColor: "#1e293b", borderRadius: 10, paddingVertical: 9, paddingHorizontal: 14,
+            alignItems: "center", borderWidth: 1, borderColor: "#334155" }}>
+          <Text style={{ color: "#3b82f6", fontWeight: "600", fontSize: 13 }}>📤 Exportar CSV</Text>
+        </Pressable>
+        <View style={{ flexDirection: "row", backgroundColor: "#1e293b", borderRadius: 12, padding: 14, gap: 16 }}>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={{ color: "#64748b", fontSize: 11 }}>Ganhos no período</Text>
             <Text style={{ color: "#22c55e", fontWeight: "700", fontSize: 18 }}>{fmt(totalEarnings)}</Text>
@@ -180,6 +212,7 @@ export default function HistoryScreen() {
               <Text style={{ color: "#f8fafc", fontWeight: "700", fontSize: 18 }}>{totalKm.toFixed(0)}</Text>
             </View>
           )}
+        </View>
         </View>
       )}
 
