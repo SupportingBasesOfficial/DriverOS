@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { supabase } from "../lib/supabase";
 import type { Session } from "@supabase/supabase-js";
@@ -31,7 +31,10 @@ export default function RootLayout() {
     const inApp = segments[0] === "(app)";
 
     if (!session) {
-      if (!inAuth) router.replace("/(auth)/login");
+      if (inAuth) return;
+      // Web: allow landing page at root; Native: go straight to login
+      if (Platform.OS === "web" && (segments as string[])[0] === undefined) return;
+      router.replace(Platform.OS === "web" ? "/" : "/(auth)/login");
       return;
     }
 
