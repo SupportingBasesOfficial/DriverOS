@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,16 +16,21 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   async function handleLogin() {
-    if (!email || !password) {
-      Alert.alert("Preencha e-mail e senha.");
-      return;
-    }
+    setErrorMsg("");
+    if (!email || !password) { setErrorMsg("Preencha e-mail e senha."); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    setLoading(false);
-    if (error) Alert.alert("Erro ao entrar", error.message);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) { setErrorMsg(error.message); console.error("[login]", error); }
+    } catch (e) {
+      setErrorMsg("Erro inesperado. Tente novamente.");
+      console.error("[login] exception", e);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -74,6 +78,10 @@ export default function LoginScreen() {
               borderColor: "#334155",
             }}
           />
+
+          {errorMsg ? (
+            <Text style={{ color: "#ef4444", fontSize: 13, textAlign: "center" }}>{errorMsg}</Text>
+          ) : null}
 
           <Pressable
             onPress={handleLogin}

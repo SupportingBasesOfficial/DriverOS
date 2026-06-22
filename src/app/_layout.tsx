@@ -43,17 +43,23 @@ export default function RootLayout() {
 
   async function checkOnboarding() {
     if (!session) return;
-    const { data } = await supabase
-      .from("vehicles")
-      .select("id")
-      .eq("user_id", session.user.id)
-      .eq("status", "active")
-      .limit(1);
+    try {
+      const { data, error } = await supabase
+        .from("vehicles")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .eq("status", "active")
+        .limit(1);
 
-    if (!data || data.length === 0) {
-      router.replace("/(onboarding)/vehicle");
-    } else {
-      router.replace("/(app)");
+      if (error) { console.error("[checkOnboarding]", error); return; }
+
+      if (!data || data.length === 0) {
+        router.replace("/(onboarding)/vehicle");
+      } else {
+        router.replace("/(app)");
+      }
+    } catch (e) {
+      console.error("[checkOnboarding] exception", e);
     }
   }
 

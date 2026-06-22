@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,33 +18,35 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   async function handleRegister() {
-    if (!name || !email || !password) {
-      Alert.alert("Preencha todos os campos.");
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert("A senha deve ter ao menos 6 caracteres.");
-      return;
-    }
+    setErrorMsg("");
+    setSuccessMsg("");
+    if (!name || !email || !password) { setErrorMsg("Preencha todos os campos."); return; }
+    if (password.length < 6) { setErrorMsg("A senha deve ter ao menos 6 caracteres."); return; }
     setLoading(true);
-    const { error, data } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { data: { full_name: name } },
-    });
-    setLoading(false);
-    if (error) {
-      Alert.alert("Erro ao criar conta", error.message);
-      return;
-    }
-    if (data.user && !data.session) {
-      Alert.alert(
-        "Confirme seu e-mail",
-        "Enviamos um link de confirmação para " + email + ". Após confirmar, faça login.",
-        [{ text: "Ir para login", onPress: () => router.replace("/(auth)/login") }]
-      );
+    try {
+      const { error, data } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { full_name: name } },
+      });
+      if (error) {
+        setErrorMsg(error.message);
+        console.error("[register]", error);
+        return;
+      }
+      if (data.user && !data.session) {
+        setSuccessMsg("Confirmação enviada para " + email + ". Verifique seu e-mail e faça login.");
+        setTimeout(() => router.replace("/(auth)/login"), 3000);
+      }
+    } catch (e) {
+      setErrorMsg("Erro inesperado. Tente novamente.");
+      console.error("[register] exception", e);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -109,6 +110,13 @@ export default function RegisterScreen() {
               borderColor: "#334155",
             }}
           />
+
+          {errorMsg ? (
+            <Text style={{ color: "#ef4444", fontSize: 13, textAlign: "center" }}>{errorMsg}</Text>
+          ) : null}
+          {successMsg ? (
+            <Text style={{ color: "#22c55e", fontSize: 13, textAlign: "center" }}>{successMsg}</Text>
+          ) : null}
 
           <Pressable
             onPress={handleRegister}
