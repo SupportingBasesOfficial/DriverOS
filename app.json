@@ -3,6 +3,7 @@
     "name": "DriverOS",
     "slug": "driveros",
     "version": "1.0.0",
+    "scheme": "driveros",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [

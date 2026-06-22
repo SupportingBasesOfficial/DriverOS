@@ -51,7 +51,7 @@ export default function RootLayout() {
         .eq("status", "active")
         .limit(1);
 
-      if (error) { console.error("[checkOnboarding]", error); return; }
+      if (error) { console.error("[checkOnboarding]", error); router.replace("/(app)"); return; }
 
       if (!data || data.length === 0) {
         router.replace("/(onboarding)/vehicle");

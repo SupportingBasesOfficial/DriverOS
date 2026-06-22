@@ -66,16 +66,22 @@ export default function HistoryScreen() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from("shifts")
-        .select("*, trips(*)")
-        .eq("user_id", user.id)
-        .order("started_at", { ascending: false })
-        .limit(30);
-      setShifts((data as Shift[]) ?? []);
-      setLoading(false);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data, error } = await supabase
+          .from("shifts")
+          .select("*, trips(*)")
+          .eq("user_id", user.id)
+          .order("started_at", { ascending: false })
+          .limit(30);
+        if (error) console.error("[history]", error);
+        setShifts((data as Shift[]) ?? []);
+      } catch (e) {
+        console.error("[history] exception", e);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);

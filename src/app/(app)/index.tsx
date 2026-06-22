@@ -25,29 +25,27 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-      const today = new Date().toISOString().split("T")[0];
+        const today = new Date().toISOString().split("T")[0];
 
-      const [{ data: snap }, { data: shift }] = await Promise.all([
-        supabase
-          .from("driver_snapshots")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("snapshot_date", today)
-          .maybeSingle(),
-        supabase
-          .from("shifts")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("status", "active")
-          .maybeSingle(),
-      ]);
+        const [{ data: snap, error: e1 }, { data: shift, error: e2 }] = await Promise.all([
+          supabase.from("driver_snapshots").select("*").eq("user_id", user.id).eq("snapshot_date", today).maybeSingle(),
+          supabase.from("shifts").select("*").eq("user_id", user.id).eq("status", "active").maybeSingle(),
+        ]);
 
-      setSnapshot(snap ?? null);
-      setActiveShift(shift ?? null);
-      setLoading(false);
+        if (e1) console.error("[dashboard] snapshots", e1);
+        if (e2) console.error("[dashboard] shifts", e2);
+
+        setSnapshot(snap ?? null);
+        setActiveShift(shift ?? null);
+      } catch (e) {
+        console.error("[dashboard] exception", e);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);

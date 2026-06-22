@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -34,37 +33,39 @@ export default function VehicleAddScreen() {
   const [odometer, setOdometer] = useState("");
   const [fuelType, setFuelType] = useState<FuelType>("flex");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   async function handleSave() {
+    setErrorMsg("");
     if (!brand || !model || !year || !plate || !odometer) {
-      Alert.alert("Preencha todos os campos obrigatórios.");
-      return;
+      setErrorMsg("Preencha todos os campos obrigatórios."); return;
     }
     const yearNum = parseInt(year);
     if (isNaN(yearNum) || yearNum < 1990 || yearNum > new Date().getFullYear() + 1) {
-      Alert.alert("Ano inválido.");
-      return;
+      setErrorMsg("Ano inválido."); return;
     }
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabase.from("vehicles").insert({
-      user_id: user.id,
-      brand: brand.trim(),
-      model: model.trim(),
-      year: yearNum,
-      plate: plate.trim().toUpperCase(),
-      current_odometer_km: parseFloat(odometer.replace(",", ".")),
-      fuel_type: fuelType,
-      status: "active",
-    });
-    setLoading(false);
-    if (error) {
-      Alert.alert("Erro ao salvar veículo", error.message);
-      return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase.from("vehicles").insert({
+        user_id: user.id,
+        brand: brand.trim(),
+        model: model.trim(),
+        year: yearNum,
+        plate: plate.trim().toUpperCase(),
+        current_odometer_km: parseFloat(odometer.replace(",", ".")),
+        fuel_type: fuelType,
+        status: "active",
+      });
+      if (error) { setErrorMsg(error.message); console.error("[vehicle-add]", error); return; }
+      router.back();
+    } catch (e) {
+      setErrorMsg("Erro inesperado. Tente novamente.");
+      console.error("[vehicle-add] exception", e);
+    } finally {
+      setLoading(false);
     }
-    router.back();
   }
 
   return (
@@ -103,10 +104,11 @@ export default function VehicleAddScreen() {
           ))}
         </View>
 
+        {errorMsg ? <Text style={{ color: "#ef4444", fontSize: 13, textAlign: "center", marginTop: 8 }}>{errorMsg}</Text> : null}
         <Pressable
           onPress={handleSave}
           disabled={loading}
-          style={{ backgroundColor: "#3b82f6", borderRadius: 12, padding: 16, alignItems: "center", marginTop: 24, opacity: loading ? 0.7 : 1 }}
+          style={{ backgroundColor: "#3b82f6", borderRadius: 12, padding: 16, alignItems: "center", marginTop: 16, opacity: loading ? 0.7 : 1 }}
         >
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>Salvar veículo</Text>}
         </Pressable>

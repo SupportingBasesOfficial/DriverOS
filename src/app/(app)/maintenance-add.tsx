@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -36,6 +35,7 @@ export default function MaintenanceAddScreen() {
   const [odometer, setOdometer] = useState("");
   const [nextDueKm, setNextDueKm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     async function loadVehicles() {
@@ -50,28 +50,29 @@ export default function MaintenanceAddScreen() {
   }, []);
 
   async function handleSave() {
-    if (!selectedVehicle || !odometer) {
-      Alert.alert("Selecione o veículo e informe o hodômetro.");
-      return;
-    }
+    setErrorMsg("");
+    if (!selectedVehicle || !odometer) { setErrorMsg("Selecione o veículo e informe o hodômetro."); return; }
     const odoNum = parseFloat(odometer.replace(",", "."));
-    if (isNaN(odoNum) || odoNum <= 0) {
-      Alert.alert("Hodômetro inválido.");
-      return;
-    }
+    if (isNaN(odoNum) || odoNum <= 0) { setErrorMsg("Hodômetro inválido."); return; }
     setLoading(true);
-    const { error } = await supabase.from("maintenances").insert({
-      vehicle_id: selectedVehicle,
-      type,
-      description: description.trim() || null,
-      cost: cost ? parseFloat(cost.replace(",", ".")) : null,
-      odometer_km: odoNum,
-      next_due_km: nextDueKm ? parseFloat(nextDueKm.replace(",", ".")) : null,
-      status: "completed",
-    });
-    setLoading(false);
-    if (error) { Alert.alert("Erro", error.message); return; }
-    router.back();
+    try {
+      const { error } = await supabase.from("maintenances").insert({
+        vehicle_id: selectedVehicle,
+        type,
+        description: description.trim() || null,
+        cost: cost ? parseFloat(cost.replace(",", ".")) : null,
+        odometer_km: odoNum,
+        next_due_km: nextDueKm ? parseFloat(nextDueKm.replace(",", ".")) : null,
+        status: "completed",
+      });
+      if (error) { setErrorMsg(error.message); console.error("[maintenance-add]", error); return; }
+      router.back();
+    } catch (e) {
+      setErrorMsg("Erro inesperado. Tente novamente.");
+      console.error("[maintenance-add] exception", e);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -126,6 +127,7 @@ export default function MaintenanceAddScreen() {
         <Field label="Hodômetro (km) *" value={odometer} onChange={setOdometer} placeholder="Ex: 48500" keyboard="decimal-pad" />
         <Field label="Próxima revisão (km)" value={nextDueKm} onChange={setNextDueKm} placeholder="Ex: 58500" keyboard="decimal-pad" />
 
+        {errorMsg ? <Text style={{ color: "#ef4444", fontSize: 13, textAlign: "center" }}>{errorMsg}</Text> : null}
         <Pressable
           onPress={handleSave}
           disabled={loading}

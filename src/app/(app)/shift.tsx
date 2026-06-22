@@ -34,6 +34,8 @@ export default function ShiftScreen() {
   const [todayTrips, setTodayTrips] = useState<Trip[]>([]);
   const [startOdometer, setStartOdometer] = useState("");
   const [endOdometer, setEndOdometer] = useState("");
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [endError, setEndError] = useState("");
   const [fareModal, setFareModal] = useState(false);
   const [fareInput, setFareInput] = useState("");
 
@@ -68,8 +70,8 @@ export default function ShiftScreen() {
   }
 
   async function startShift() {
-    if (!startOdometer) { Alert.alert("Informe o hodômetro inicial."); return; }
-    if (!vehicle) { Alert.alert("Cadastre um veículo primeiro."); return; }
+    if (!startOdometer) { return; }
+    if (!vehicle) { return; }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setActionLoading(true);
@@ -85,30 +87,35 @@ export default function ShiftScreen() {
     loadData();
   }
 
-  async function endShift() {
+  function endShift() {
     if (!activeShift) return;
-    if (!endOdometer) { Alert.alert("Informe o hodômetro final."); return; }
-    Alert.alert("Encerrar turno?", "Confirma o encerramento do turno?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Encerrar", style: "destructive", onPress: async () => {
-          setActionLoading(true);
-          const { data: { user } } = await supabase.auth.getUser();
-          await supabase.from("shifts").update({
-            status: "completed",
-            ended_at: new Date().toISOString(),
-            final_odometer_km: parseFloat(endOdometer),
-          }).eq("id", activeShift.id);
-          if (user) {
-            const today = new Date().toISOString().split("T")[0];
-            await supabase.rpc("snapshot_daily_update", { p_user_id: user.id, p_date: today });
-          }
-          setActionLoading(false);
-          setEndOdometer("");
-          loadData();
-        },
-      },
-    ]);
+    if (!endOdometer) { setEndError("Informe o hodômetro final."); return; }
+    setEndError("");
+    setConfirmEnd(true);
+  }
+
+  async function doEndShift() {
+    if (!activeShift) return;
+    setConfirmEnd(false);
+    setActionLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("shifts").update({
+        status: "completed",
+        ended_at: new Date().toISOString(),
+        final_odometer_km: parseFloat(endOdometer),
+      }).eq("id", activeShift.id);
+      if (user) {
+        const today = new Date().toISOString().split("T")[0];
+        await supabase.rpc("snapshot_daily_update", { p_user_id: user.id, p_date: today });
+      }
+    } catch (e) {
+      console.error("[doEndShift]", e);
+    } finally {
+      setActionLoading(false);
+      setEndOdometer("");
+      loadData();
+    }
   }
 
   async function startTrip(category: Trip["category"]) {
@@ -258,19 +265,34 @@ export default function ShiftScreen() {
             <Text style={{ color: "#94a3b8", fontSize: 13, fontWeight: "600" }}>ENCERRAR TURNO</Text>
             <TextInput
               value={endOdometer}
-              onChangeText={setEndOdometer}
+              onChangeText={text => { setEndOdometer(text); setEndError(""); }}
               placeholder="Hodômetro final (km)"
               placeholderTextColor="#475569"
               keyboardType="decimal-pad"
-              style={{ backgroundColor: "#1e293b", color: "#f8fafc", borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 1, borderColor: "#334155" }}
+              style={{ backgroundColor: "#1e293b", color: "#f8fafc", borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 1, borderColor: endError ? "#ef4444" : "#334155" }}
             />
-            <Pressable
-              onPress={endShift}
-              disabled={actionLoading || !!activeTrip}
-              style={{ backgroundColor: "#7f1d1d", borderRadius: 12, padding: 16, alignItems: "center", opacity: (actionLoading || !!activeTrip) ? 0.5 : 1 }}
-            >
-              <Text style={{ color: "#fca5a5", fontSize: 16, fontWeight: "600" }}>⏹ Encerrar turno</Text>
-            </Pressable>
+            {endError ? <Text style={{ color: "#ef4444", fontSize: 12 }}>{endError}</Text> : null}
+            {confirmEnd ? (
+              <View style={{ gap: 8 }}>
+                <Text style={{ color: "#fca5a5", textAlign: "center", fontSize: 14 }}>Confirma o encerramento do turno?</Text>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable onPress={() => setConfirmEnd(false)} style={{ flex: 1, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: "#334155", alignItems: "center" }}>
+                    <Text style={{ color: "#94a3b8", fontWeight: "600" }}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable onPress={doEndShift} disabled={actionLoading} style={{ flex: 1, padding: 14, borderRadius: 10, backgroundColor: "#7f1d1d", alignItems: "center" }}>
+                    {actionLoading ? <ActivityIndicator color="#fca5a5" /> : <Text style={{ color: "#fca5a5", fontWeight: "600" }}>Confirmar</Text>}
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                onPress={endShift}
+                disabled={actionLoading || !!activeTrip}
+                style={{ backgroundColor: "#7f1d1d", borderRadius: 12, padding: 16, alignItems: "center", opacity: (actionLoading || !!activeTrip) ? 0.5 : 1 }}
+              >
+                <Text style={{ color: "#fca5a5", fontSize: 16, fontWeight: "600" }}>⏹ Encerrar turno</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       )}
