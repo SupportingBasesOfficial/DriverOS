@@ -32,6 +32,19 @@ export default function VehicleAddScreen() {
   const [plate, setPlate] = useState("");
   const [odometer, setOdometer] = useState("");
   const [fuelType, setFuelType] = useState<FuelType>("flex");
+
+  function maskPlate(v: string) {
+    const raw = v.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    let out = "";
+    for (let i = 0; i < raw.length && i < 7; i++) {
+      const ch = raw[i];
+      if (i < 3) { if (/[A-Z]/.test(ch)) out += ch; else break; }
+      else if (i === 3) { if (/[0-9]/.test(ch)) out += ch; else break; }
+      else if (i === 4) { if (/[A-Z]/.test(ch)) out += ch; else break; }
+      else { if (/[0-9]/.test(ch)) out += ch; else break; }
+    }
+    return out;
+  }
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -81,7 +94,7 @@ export default function VehicleAddScreen() {
         <Field label="Marca *" value={brand} onChange={setBrand} placeholder="Ex: Toyota" />
         <Field label="Modelo *" value={model} onChange={setModel} placeholder="Ex: Corolla" />
         <Field label="Ano *" value={year} onChange={setYear} placeholder="Ex: 2020" keyboard="number-pad" />
-        <Field label="Placa *" value={plate} onChange={setPlate} placeholder="Ex: ABC1D23" autoCapitalize="characters" />
+        <Field label="Placa *" value={plate} onChange={(v: string) => setPlate(maskPlate(v))} placeholder="Ex: ABC1D23" autoCapitalize="characters" />
         <Field label="Hodômetro atual (km) *" value={odometer} onChange={setOdometer} placeholder="Ex: 45000" keyboard="decimal-pad" />
 
         <Text style={{ color: "#94a3b8", fontSize: 13, fontWeight: "600", marginTop: 8 }}>COMBUSTÍVEL</Text>

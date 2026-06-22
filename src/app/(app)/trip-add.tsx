@@ -107,10 +107,12 @@ export default function TripAddScreen() {
     router.back();
   }
 
-  const fmtMoney = (v: string) => {
-    const num = parseFloat(v.replace(",", "."));
-    return isNaN(num) ? "" : num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
+  function maskMoney(v: string): string {
+    const digits = v.replace(/\D/g, "");
+    const num = parseInt(digits, 10);
+    if (isNaN(num)) return "";
+    return (num / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: "#0f172a" }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -168,7 +170,7 @@ export default function TripAddScreen() {
           <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "600" }}>VALOR DA CORRIDA (R$)</Text>
           <TextInput
             value={fare}
-            onChangeText={setFare}
+            onChangeText={(v) => setFare(maskMoney(v))}
             keyboardType="decimal-pad"
             placeholder="0,00"
             placeholderTextColor="#475569"
@@ -180,7 +182,7 @@ export default function TripAddScreen() {
           <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "600" }}>GORJETA (R$) — opcional</Text>
           <TextInput
             value={tip}
-            onChangeText={setTip}
+            onChangeText={(v: string) => setTip(maskMoney(v))}
             keyboardType="decimal-pad"
             placeholder="0,00"
             placeholderTextColor="#475569"

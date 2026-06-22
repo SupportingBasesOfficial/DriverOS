@@ -26,6 +26,13 @@ export default function RefuelingAddScreen() {
   const [stationName, setStationName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function maskMoney(v: string): string {
+    const digits = v.replace(/\D/g, "");
+    const num = parseInt(digits, 10);
+    if (isNaN(num)) return "";
+    return (num / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   useEffect(() => {
     async function loadVehicles() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -114,7 +121,7 @@ export default function RefuelingAddScreen() {
         )}
 
         <Field label="Litros *" value={liters} onChange={setLiters} placeholder="Ex: 40.5" keyboard="decimal-pad" />
-        <Field label="Valor total (R$) *" value={totalCost} onChange={setTotalCost} placeholder="Ex: 250,00" keyboard="decimal-pad" />
+        <Field label="Valor total (R$) *" value={totalCost} onChange={(v: string) => setTotalCost(maskMoney(v))} placeholder="Ex: 250,00" keyboard="decimal-pad" />
         <Field label="Hodômetro (km) *" value={odometer} onChange={setOdometer} placeholder="Ex: 48500" keyboard="decimal-pad" />
         <Field label="Nome do posto" value={stationName} onChange={setStationName} placeholder="Ex: Posto Shell" />
 
