@@ -137,7 +137,28 @@ export default function FinanceiroScreen() {
   const onRefresh = () => { setRefreshing(true); loadAll(period); };
 
   async function markPaid(id: string) {
-    await supabase.from("vehicle_expenses").update({ status: "paid" }).eq("id", id);
+    const exp = expenses.find((e: Expense) => e.id === id);
+    if (!exp) return;
+    const isInst = exp.installment_count != null && exp.installment_count > 0;
+    if (isInst) {
+      const newPaid = (exp.installments_paid ?? 0) + 1;
+      const allDone = newPaid >= (exp.installment_count ?? 0);
+      // Recalculate next due date
+      let nextDue: string | null = null;
+      if (exp.started_at && exp.due_day) {
+        const d = new Date(exp.started_at);
+        d.setMonth(d.getMonth() + newPaid);
+        d.setDate(exp.due_day);
+        nextDue = d.toISOString().split("T")[0];
+      }
+      await supabase.from("vehicle_expenses").update({
+        installments_paid: newPaid,
+        status: allDone ? ("paid" as Expense["status"]) : ("pending" as Expense["status"]),
+        due_date: nextDue,
+      }).eq("id", id);
+    } else {
+      await supabase.from("vehicle_expenses").update({ status: "paid" as Expense["status"] }).eq("id", id);
+    }
     loadAll(period);
   }
 
@@ -259,33 +280,105 @@ export default function FinanceiroScreen() {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />}
             contentContainerStyle={{ padding: 16, gap: 10, paddingTop: 4 }}
             ListEmptyComponent={<Empty label={"Nenhuma despesa cadastrada.\nToque em + Nova despesa para começar."} />}
-            renderItem={({ item }) => (
-              <View style={{ backgroundColor: "#1e293b", borderRadius: 12, overflow: "hidden" }}>
-                <Pressable onLongPress={() => deleteRecord("vehicle_expenses", item.id, "despesa")}
-                  style={{ padding: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
-                    <Text style={{ color: "#f8fafc", fontWeight: "600" }}>📄 {EXPENSE_LABEL[item.category]}</Text>
-                    <Text style={{ color: "#94a3b8", fontSize: 12 }}>{item.description}</Text>
-                    {item.due_date ? (
-                      <Text style={{ color: "#64748b", fontSize: 11 }}>Vence: {new Date(item.due_date).toLocaleDateString("pt-BR")}</Text>
-                    ) : null}
-                    <Text style={{ color: "#334155", fontSize: 10 }}>Segure para excluir</Text>
-                  </View>
-                  <View style={{ alignItems: "flex-end", gap: 6 }}>
-                    <Text style={{ color: "#ef4444", fontWeight: "700" }}>{fmt(item.amount)}</Text>
-                    <View style={{ backgroundColor: STATUS_COLOR[item.status] + "33", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                      <Text style={{ color: STATUS_COLOR[item.status], fontSize: 11, fontWeight: "600" }}>{STATUS_LABEL[item.status]}</Text>
+            renderItem={({ item }) => {
+              const isInst = item.installment_count != null && item.installment_count > 0;
+              const paidCount = item.installments_paid ?? 0;
+              const totalCount = item.installment_count ?? 0;
+              const remaining = Math.max(0, totalCount - paidCount);
+              const instAmt = item.installment_amount ?? item.amount;
+              const totalLeft = remaining * instAmt;
+              const progress = totalCount > 0 ? paidCount / totalCount : 0;
+              const nextDue = (() => {
+                if (!item.started_at || !item.due_day) return item.due_date;
+                try {
+                  const d = new Date(item.started_at);
+                  d.setMonth(d.getMonth() + paidCount);
+                  d.setDate(item.due_day);
+                  return d.toISOString().split("T")[0];
+                } catch { return item.due_date; }
+              })();
+              return (
+                <View style={{ backgroundColor: "#1e293b", borderRadius: 12, overflow: "hidden" }}>
+                  <Pressable onLongPress={() => deleteRecord("vehicle_expenses", item.id, "despesa")}
+                    style={{ padding: 14, gap: 10 }}>
+                    {/* Header row */}
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <View style={{ gap: 2, flex: 1, marginRight: 12 }}>
+                        <Text style={{ color: "#f8fafc", fontWeight: "700", fontSize: 14 }}>
+                          📄 {EXPENSE_LABEL[item.category]}
+                        </Text>
+                        <Text style={{ color: "#94a3b8", fontSize: 12 }}>{item.description}</Text>
+                        {item.notes ? <Text style={{ color: "#475569", fontSize: 11 }}>📝 {item.notes}</Text> : null}
+                      </View>
+                      <View style={{ alignItems: "flex-end", gap: 4 }}>
+                        <Text style={{ color: "#ef4444", fontWeight: "700", fontSize: 15 }}>{fmt(instAmt)}</Text>
+                        <View style={{ backgroundColor: STATUS_COLOR[item.status] + "33", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                          <Text style={{ color: STATUS_COLOR[item.status], fontSize: 11, fontWeight: "600" }}>{STATUS_LABEL[item.status]}</Text>
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                </Pressable>
-                {(item.status === "pending" || item.status === "overdue") && (
-                  <Pressable onPress={() => markPaid(item.id)}
-                    style={{ backgroundColor: "#14532d", paddingVertical: 10, alignItems: "center" }}>
-                    <Text style={{ color: "#4ade80", fontSize: 13, fontWeight: "700" }}>✓  Marcar como pago</Text>
+
+                    {/* Installment details */}
+                    {isInst && (
+                      <View style={{ gap: 6 }}>
+                        {/* Progress bar */}
+                        <View style={{ height: 6, backgroundColor: "#334155", borderRadius: 3, overflow: "hidden" }}>
+                          <View style={{ width: `${Math.round(progress * 100)}%` as unknown as number,
+                            height: 6, backgroundColor: progress >= 1 ? "#22c55e" : "#3b82f6", borderRadius: 3 }} />
+                        </View>
+                        {/* Stats row */}
+                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                          <Text style={{ color: "#64748b", fontSize: 11 }}>
+                            Parcela <Text style={{ color: "#f8fafc", fontWeight: "700" }}>{paidCount + 1}</Text>/{totalCount}
+                          </Text>
+                          <Text style={{ color: "#64748b", fontSize: 11 }}>
+                            Pagas: <Text style={{ color: "#22c55e", fontWeight: "700" }}>{paidCount}</Text>
+                          </Text>
+                          <Text style={{ color: "#64748b", fontSize: 11 }}>
+                            Restam: <Text style={{ color: "#f59e0b", fontWeight: "700" }}>{remaining}</Text>
+                          </Text>
+                          {item.total_amount ? (
+                            <Text style={{ color: "#64748b", fontSize: 11 }}>
+                              Total: <Text style={{ color: "#94a3b8", fontWeight: "700" }}>{fmt(item.total_amount)}</Text>
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View style={{ flexDirection: "row", gap: 10 }}>
+                          {remaining > 0 && (
+                            <Text style={{ color: "#64748b", fontSize: 11 }}>
+                              Saldo devedor: <Text style={{ color: "#ef4444", fontWeight: "700" }}>{fmt(totalLeft)}</Text>
+                            </Text>
+                          )}
+                          {nextDue && (
+                            <Text style={{ color: "#64748b", fontSize: 11 }}>
+                              Próx: <Text style={{ color: "#f8fafc", fontWeight: "700" }}>{new Date(nextDue).toLocaleDateString("pt-BR")}</Text>
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Due date for non-installment */}
+                    {!isInst && nextDue && (
+                      <Text style={{ color: "#64748b", fontSize: 11 }}>
+                        Vence: <Text style={{ color: "#f8fafc" }}>{new Date(nextDue).toLocaleDateString("pt-BR")}</Text>
+                      </Text>
+                    )}
+
+                    <Text style={{ color: "#1e3a5f", fontSize: 10 }}>Segure para excluir</Text>
                   </Pressable>
-                )}
-              </View>
-            )}
+
+                  {(item.status === "pending" || item.status === "overdue") && (
+                    <Pressable onPress={() => markPaid(item.id)}
+                      style={{ backgroundColor: "#14532d", paddingVertical: 10, alignItems: "center" }}>
+                      <Text style={{ color: "#4ade80", fontSize: 13, fontWeight: "700" }}>
+                        {isInst ? `✓  Registrar parcela ${paidCount + 1}/${totalCount}` : "✓  Marcar como pago"}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              );
+            }}
           />
         </>
       )}
