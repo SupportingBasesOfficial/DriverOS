@@ -41,6 +41,7 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen name="history" options={{ href: null }} />
+      <Tabs.Screen name="trip-map" options={{ href: null, tabBarStyle: { display: "none" }, headerShown: false }} />
       <Tabs.Screen name="vehicle-add" options={{ href: null }} />
       <Tabs.Screen name="refueling-add" options={{ href: null }} />
       <Tabs.Screen name="maintenance-add" options={{ href: null }} />

@@ -9,8 +9,11 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as Location from "expo-location";
 import { supabase } from "../../lib/supabase";
 import type { Tables } from "../../lib/database.types";
+import { startLocationTracking, stopLocationTracking } from "../../lib/locationTask";
+import { totalDistanceKm, buildRouteGeoJSON, type LocationPoint } from "../../lib/locationUtils";
 
 type Shift = Tables<"shifts">;
 type Trip = Tables<"trips">;
@@ -123,28 +126,72 @@ export default function ShiftScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setActionLoading(true);
-    const { error } = await supabase.from("trips").insert({
-      shift_id: activeShift.id,
-      vehicle_id: vehicle.id,
-      user_id: user.id,
-      category,
-      status: "in_progress",
-    });
-    setActionLoading(false);
-    if (error) { Alert.alert("Erro", error.message); return; }
-    loadData();
+    try {
+      let startLoc: { latitude: number; longitude: number } | null = null;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          startLoc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        }
+      } catch (gpsErr) {
+        console.warn("[startTrip] GPS unavailable", gpsErr);
+      }
+      const { data: newTrip, error } = await supabase.from("trips").insert({
+        shift_id: activeShift.id,
+        vehicle_id: vehicle.id,
+        user_id: user.id,
+        category,
+        status: "in_progress",
+        start_location: startLoc,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any).select("id").single();
+      if (error) { Alert.alert("Erro", error.message); return; }
+      try { if (newTrip?.id) await startLocationTracking(newTrip.id); } catch (e) { console.warn("[startTrip] tracking", e); }
+      loadData();
+    } catch (e) {
+      console.error("[startTrip]", e);
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   async function endTrip(fare?: number) {
     if (!activeTrip) return;
     setActionLoading(true);
-    await supabase.from("trips").update({
-      status: "completed",
-      ended_at: new Date().toISOString(),
-      fare_amount: fare ?? null,
-    }).eq("id", activeTrip.id);
-    setActionLoading(false);
-    loadData();
+    try {
+      try { await stopLocationTracking(); } catch (e) { console.warn("[endTrip] stop tracking", e); }
+      let endLoc: { latitude: number; longitude: number } | null = null;
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === "granted") {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          endLoc = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        }
+      } catch (e) { console.warn("[endTrip] GPS end", e); }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: pts } = await (supabase.from("locations") as any)
+        .select("latitude, longitude, recorded_at")
+        .eq("trip_id", activeTrip.id)
+        .order("recorded_at", { ascending: true });
+      const points = (pts ?? []) as LocationPoint[];
+      const distKm = totalDistanceKm(points);
+      const routeGeoJSON = points.length >= 2 ? buildRouteGeoJSON(points) : null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("trips") as any).update({
+        status: "completed",
+        ended_at: new Date().toISOString(),
+        fare_amount: fare ?? null,
+        end_location: endLoc,
+        distance_km: distKm > 0 ? distKm : null,
+        route_geojson: routeGeoJSON,
+      }).eq("id", activeTrip.id);
+    } catch (e) {
+      console.error("[endTrip]", e);
+    } finally {
+      setActionLoading(false);
+      loadData();
+    }
   }
 
   function promptEndTrip() {

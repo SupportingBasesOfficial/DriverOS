@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { supabase } from "../lib/supabase";
 import type { Session } from "@supabase/supabase-js";
+import "../lib/locationTask";
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);

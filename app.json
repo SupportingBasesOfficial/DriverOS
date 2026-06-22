@@ -11,10 +11,19 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.supportingbases.driveros"
+      "bundleIdentifier": "com.supportingbases.driveros",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Para rastrear a rota das suas viagens",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Para rastrear rotas em segundo plano durante o turno"
+      }
     },
     "android": {
-      "package": "com.supportingbases.driveros"
+      "package": "com.supportingbases.driveros",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -28,7 +37,15 @@
         }
       ],
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Para rastrear a rota das suas viagens",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import type { Tables } from "../../lib/database.types";
 
@@ -15,6 +16,7 @@ const CATEGORY_LABEL: Record<Tables<"trips">["category"], string> = {
 };
 
 function ShiftCard({ shift }: { shift: Shift }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const earnings = shift.trips.reduce((s, t) => s + (t.fare_amount ?? 0), 0);
   const duration = shift.ended_at
@@ -45,13 +47,25 @@ function ShiftCard({ shift }: { shift: Shift }) {
       {expanded && shift.trips.length > 0 && (
         <View style={{ borderTopWidth: 1, borderTopColor: "#334155" }}>
           {shift.trips.map(trip => (
-            <View key={trip.id} style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#0f172a" }}>
-              <Text style={{ color: "#94a3b8", fontSize: 13 }}>{CATEGORY_LABEL[trip.category]}</Text>
-              <Text style={{ color: trip.fare_amount ? "#f8fafc" : "#475569", fontSize: 13 }}>
-                {trip.fare_amount
-                  ? trip.fare_amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-                  : "—"}
-              </Text>
+            <View key={trip.id} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#0f172a" }}>
+              <View style={{ gap: 2 }}>
+                <Text style={{ color: "#94a3b8", fontSize: 13 }}>{CATEGORY_LABEL[trip.category]}</Text>
+                {trip.distance_km ? (
+                  <Text style={{ color: "#475569", fontSize: 11 }}>{Number(trip.distance_km).toFixed(1)} km</Text>
+                ) : null}
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                {trip.route_geojson ? (
+                  <Pressable onPress={() => router.push(`/(app)/trip-map?tripId=${trip.id}` as never)}>
+                    <Text style={{ color: "#3b82f6", fontSize: 12, fontWeight: "600" }}>🗺 Rota</Text>
+                  </Pressable>
+                ) : null}
+                <Text style={{ color: trip.fare_amount ? "#f8fafc" : "#475569", fontSize: 13 }}>
+                  {trip.fare_amount
+                    ? trip.fare_amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                    : "—"}
+                </Text>
+              </View>
             </View>
           ))}
         </View>
