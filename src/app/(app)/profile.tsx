@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../../lib/supabase";
@@ -32,6 +33,8 @@ export default function ProfileScreen() {
   const [monthlyGoal, setMonthlyGoal] = useState("");
   const [goalSaved, setGoalSaved]     = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -55,6 +58,7 @@ export default function ProfileScreen() {
     setUserApps(new Set(((uApps ?? []) as UserRideApp[]).map((ua) => ua.ride_app_id)));
     setName((p as Profile | null)?.full_name ?? "");
     setPhone((p as Profile | null)?.phone ?? "");
+    setAvatarUrl((p as Profile | null)?.avatar_url ?? null);
     setDailyGoal(dGoal ?? "");
     setWeeklyGoal(wGoal ?? "");
     setMonthlyGoal(mGoal ?? "");
@@ -121,6 +125,48 @@ export default function ProfileScreen() {
     ]);
   }
 
+  async function pickAndUploadPhoto() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permissão necessária", "Permita o acesso à galeria para adicionar foto.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+    });
+    if (result.canceled) return;
+    setUploadingPhoto(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const uri = result.assets[0].uri;
+      const ext = uri.split(".").pop()?.toLowerCase() ?? "jpg";
+      const path = `${user.id}/avatar.${ext}`;
+      const resp = await fetch(uri);
+      const blob = await resp.blob();
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: `image/${ext}` });
+      if (upErr) { Alert.alert("Erro ao enviar foto", upErr.message); return; }
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      const urlWithBust = `${publicUrl}?t=${Date.now()}`;
+      await supabase.from("profiles").update({ avatar_url: urlWithBust }).eq("id", user.id);
+      setAvatarUrl(urlWithBust);
+    } catch { Alert.alert("Erro inesperado ao fazer upload."); }
+    finally { setUploadingPhoto(false); }
+  }
+
+  async function deletePhoto() {
+    Alert.alert("Remover foto", "Tem certeza?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Remover", style: "destructive", onPress: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+        setAvatarUrl(null);
+      }},
+    ]);
+  }
+
   async function sendPasswordReset() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) return;
@@ -146,9 +192,33 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "#0f172a" }} contentContainerStyle={{ padding: 16, gap: 16 }}>
       {/* Avatar */}
-      <View style={{ alignItems: "center", paddingVertical: 20, gap: 8 }}>
-        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: "#1e293b", alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 32 }}>👤</Text>
+      <View style={{ alignItems: "center", paddingVertical: 20, gap: 10 }}>
+        <Pressable onPress={pickAndUploadPhoto} disabled={uploadingPhoto}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }}
+              style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: "#3b82f6" }} />
+          ) : (
+            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "#1e293b",
+              alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#334155" }}>
+              {uploadingPhoto ? <ActivityIndicator color="#3b82f6" /> : <Text style={{ fontSize: 36 }}>👤</Text>}
+            </View>
+          )}
+        </Pressable>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable onPress={pickAndUploadPhoto} disabled={uploadingPhoto}
+            style={{ backgroundColor: "#1e293b", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7,
+              borderWidth: 1, borderColor: "#334155" }}>
+            <Text style={{ color: "#3b82f6", fontSize: 12, fontWeight: "600" }}>
+              {uploadingPhoto ? "Enviando..." : avatarUrl ? "Trocar foto" : "+ Foto"}
+            </Text>
+          </Pressable>
+          {avatarUrl ? (
+            <Pressable onPress={deletePhoto}
+              style={{ backgroundColor: "#1e293b", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7,
+                borderWidth: 1, borderColor: "#7f1d1d" }}>
+              <Text style={{ color: "#ef4444", fontSize: 12, fontWeight: "600" }}>Remover</Text>
+            </Pressable>
+          ) : null}
         </View>
         <Text style={{ color: "#f8fafc", fontSize: 18, fontWeight: "bold" }}>{name || "Motorista"}</Text>
         <Text style={{ color: "#64748b", fontSize: 12, textTransform: "uppercase" }}>{(profile as Profile | null)?.role ?? "driver"}</Text>

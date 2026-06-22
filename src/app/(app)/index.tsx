@@ -10,10 +10,22 @@ import { DriverOSLogo } from "../../components/DriverOSLogo";
 type Snapshot  = Tables<"driver_snapshots">;
 type Shift     = Tables<"shifts">;
 type Refueling = Tables<"refuelings">;
+type Expense   = Tables<"vehicle_expenses">;
 
 const GOAL_KEY         = "@driveros:daily_goal";
 const WEEKLY_GOAL_KEY  = "@driveros:weekly_goal";
 const MONTHLY_GOAL_KEY = "@driveros:monthly_goal";
+const DEBT_KEY         = "@driveros:min_debt";
+const DEBT_DATE_KEY    = "@driveros:min_debt_date";
+
+const EXPENSE_CAT_LABEL: Record<string, string> = {
+  ipva: "IPVA", insurance: "Seguro", licensing: "Licenciamento",
+  financing: "Financiamento", rent: "Aluguel", maintenance: "Manutenção",
+  fuel: "Combustível", other: "Outros",
+};
+const FREQ_DAYS: Record<string, number> = {
+  daily: 1, weekly: 7, monthly: 30, quarterly: 91, yearly: 365,
+};
 
 interface PeriodStats { earnings: number; expenses: number; netProfit: number; km: number; }
 
@@ -66,6 +78,10 @@ export default function DashboardScreen() {
   const [weeklyGoal, setWeeklyGoal]   = useState<number | null>(null);
   const [monthlyGoal, setMonthlyGoal] = useState<number | null>(null);
   const [avgKmL, setAvgKmL]           = useState<number | null>(null);
+  const [vehicleExpenses, setVehicleExpenses] = useState<Expense[]>([]);
+  const [minBase, setMinBase]         = useState(0);
+  const [minDebt, setMinDebt]         = useState(0);
+  const [expensesExpanded, setExpensesExpanded] = useState(false);
 
   useFocusEffect(useCallback(() => { load(); }, []));
 
@@ -120,11 +136,54 @@ export default function DashboardScreen() {
 
       const vid = (veh as { id: string } | null)?.id;
       if (vid) {
-        const { data: refs } = await supabase.from("refuelings").select("km_per_liter")
-          .eq("vehicle_id", vid).not("km_per_liter", "is", null)
-          .order("created_at", { ascending: false }).limit(5);
+        const [{ data: refs }, { data: exps }, { data: recentKm }, { data: recentFuel }] = await Promise.all([
+          supabase.from("refuelings").select("km_per_liter")
+            .eq("vehicle_id", vid).not("km_per_liter", "is", null)
+            .order("created_at", { ascending: false }).limit(5),
+          supabase.from("vehicle_expenses").select("*").eq("vehicle_id", vid),
+          supabase.from("driver_snapshots").select("total_km").eq("user_id", user.id)
+            .gte("snapshot_date", new Date(now.getTime() - 14 * 86400000).toISOString().split("T")[0])
+            .gt("total_km", 0),
+          supabase.from("refuelings").select("total_cost,liters")
+            .eq("vehicle_id", vid).order("created_at", { ascending: false }).limit(5),
+        ]);
+
         const vals = ((refs ?? []) as Refueling[]).map(r => r.km_per_liter!).filter(v => v > 0);
-        setAvgKmL(vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null);
+        const kpl  = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+        setAvgKmL(kpl > 0 ? kpl : null);
+
+        const expList = (exps ?? []) as Expense[];
+        setVehicleExpenses(expList);
+
+        const kmRows   = (recentKm ?? []) as Snapshot[];
+        const avgKmDay = kmRows.length ? kmRows.reduce((s, r) => s + (r.total_km ?? 0), 0) / kmRows.length : 0;
+        const fuelRows = (recentFuel ?? []) as { total_cost: number; liters: number }[];
+        const avgPPL   = fuelRows.length ? fuelRows.reduce((s, r) => s + r.total_cost / r.liters, 0) / fuelRows.length : 0;
+
+        const baseFromExp = expList.reduce((s, e) => s + (e.installment_amount ?? e.amount) / (FREQ_DAYS[e.frequency] ?? 30), 0);
+        const fuelPerDay  = kpl > 0 && avgPPL > 0 && avgKmDay > 0 ? avgKmDay * (avgPPL / kpl) : 0;
+        const base        = baseFromExp + fuelPerDay;
+
+        const [storedDebt, debtDate] = await Promise.all([
+          AsyncStorage.getItem(DEBT_KEY),
+          AsyncStorage.getItem(DEBT_DATE_KEY),
+        ]);
+        let debt = parseFloat(storedDebt ?? "0") || 0;
+        if (debtDate !== today) {
+          const yd = new Date(now); yd.setDate(yd.getDate() - 1);
+          const yds = yd.toISOString().split("T")[0];
+          const { data: ydSnap } = await supabase.from("driver_snapshots")
+            .select("total_earnings").eq("user_id", user.id).eq("snapshot_date", yds).maybeSingle();
+          const ydE    = (ydSnap as { total_earnings: number } | null)?.total_earnings ?? 0;
+          const needed = base + debt;
+          debt = ydE < needed ? debt + (needed - ydE) : 0;
+          await Promise.all([
+            AsyncStorage.setItem(DEBT_KEY, debt.toFixed(2)),
+            AsyncStorage.setItem(DEBT_DATE_KEY, today),
+          ]);
+        }
+        setMinBase(base);
+        setMinDebt(debt);
       }
     } catch (e) { console.error("[dashboard]", e); }
     finally { setLoading(false); setRefreshing(false); }
@@ -215,12 +274,74 @@ export default function DashboardScreen() {
         </View>
       ) : null}
 
+      {minBase > 0 && ((() => {
+        const minToday = minBase + minDebt;
+        const pct  = Math.min(1, minToday > 0 ? todayE / minToday : 0);
+        const done = pct >= 1;
+        return (
+          <View style={{ backgroundColor: "#1e293b", borderRadius: 14, padding: 16, gap: 8,
+            borderWidth: 1, borderColor: done ? "#14532d" : "#422006" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={{ color: done ? "#22c55e" : "#f59e0b", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>
+                ⚡ MÍNIMO PARA COBRIR CONTAS
+              </Text>
+              <Text style={{ color: done ? "#22c55e" : "#f8fafc", fontSize: 11, fontWeight: "700" }}>
+                {fmt(todayE)} <Text style={{ color: "#475569" }}>/ {fmt(minToday)}</Text>
+              </Text>
+            </View>
+            <View style={{ height: 6, backgroundColor: "#1e3a5f", borderRadius: 3, overflow: "hidden" }}>
+              <View style={{ width: `${(pct * 100).toFixed(1)}%` as unknown as number,
+                height: 6, backgroundColor: done ? "#22c55e" : "#f59e0b", borderRadius: 3 }} />
+            </View>
+            <Text style={{ color: done ? "#22c55e" : "#64748b", fontSize: 10 }}>
+              {done ? "✓ Contas do dia cobertas!" :
+               minDebt > 0 ? `Base ${fmt(minBase)} + acum. ${fmt(minDebt)} — faltam ${fmt(minToday - todayE)}` :
+               `${(pct * 100).toFixed(0)}% — faltam ${fmt(minToday - todayE)}`}
+            </Text>
+          </View>
+        );
+      })())}
+
       {/* ── Today ── */}
       <Text style={{ color: "#64748b", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>HOJE</Text>
       <View style={{ flexDirection: "row", gap: 10 }}>
-        <Card label="Ganhos"   value={fmt(todayE)} accent="#22c55e" />
-        <Card label="Despesas" value={fmt(todayX)} accent="#ef4444" />
+        <Card label="Ganhos" value={fmt(todayE)} accent="#22c55e" />
+        <Pressable onPress={() => setExpensesExpanded(v => !v)}
+          style={{ flex: 1, backgroundColor: "#1e293b", borderRadius: 14, padding: 16, gap: 3,
+            borderWidth: 1, borderColor: "#243044" }}>
+          <Text style={{ color: "#64748b", fontSize: 11, fontWeight: "600", letterSpacing: 0.4 }}>
+            DESPESAS {expensesExpanded ? "▲" : "▼"}
+          </Text>
+          <Text style={{ color: "#ef4444", fontSize: 20, fontWeight: "800" }}>{fmt(todayX)}</Text>
+          <Text style={{ color: "#334155", fontSize: 10 }}>toque para detalhar</Text>
+        </Pressable>
       </View>
+      {expensesExpanded && vehicleExpenses.length > 0 && (
+        <View style={{ backgroundColor: "#1e293b", borderRadius: 14, padding: 16, gap: 8,
+          borderWidth: 1, borderColor: "#243044" }}>
+          <Text style={{ color: "#64748b", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>
+            DESPESAS RECORRENTES DO VEÍCULO
+          </Text>
+          {Object.entries(
+            vehicleExpenses.reduce((acc: Record<string, number>, e) => {
+              acc[e.category] = (acc[e.category] ?? 0) + (e.installment_amount ?? e.amount);
+              return acc;
+            }, {})
+          ).map(([cat, val]) => (
+            <View key={cat} style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={{ color: "#94a3b8", fontSize: 13 }}>{EXPENSE_CAT_LABEL[cat] ?? cat}</Text>
+              <Text style={{ color: "#f8fafc", fontSize: 13, fontWeight: "600" }}>{fmt(val as number)}</Text>
+            </View>
+          ))}
+          <View style={{ height: 1, backgroundColor: "#334155", marginVertical: 2 }} />
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "700" }}>Total mensal est.</Text>
+            <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "800" }}>
+              {fmt(vehicleExpenses.reduce((s, e) => s + (e.installment_amount ?? e.amount) / (FREQ_DAYS[e.frequency] ?? 30) * 30, 0))}
+            </Text>
+          </View>
+        </View>
+      )}
       <View style={{ flexDirection: "row", gap: 10 }}>
         <Card label="Lucro líquido" value={fmt(todayN)}
           accent={todayN >= 0 ? "#f8fafc" : "#ef4444"}

@@ -48,6 +48,8 @@ export default function VehicleAddScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      const { data: existingActive } = await supabase.from("vehicles")
+        .select("id").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle();
       const { error } = await supabase.from("vehicles").insert({
         user_id: user.id,
         brand: brand.trim(),
@@ -56,7 +58,7 @@ export default function VehicleAddScreen() {
         plate: plate.trim().toUpperCase(),
         current_odometer_km: parseFloat(odometer.replace(",", ".")),
         fuel_type: fuelType,
-        status: "active",
+        status: existingActive ? "inactive" : "active",
       });
       if (error) { setErrorMsg(error.message); console.error("[vehicle-add]", error); return; }
       router.back();
