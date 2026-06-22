@@ -76,6 +76,11 @@ export default function ShiftScreen() {
   async function startShift() {
     if (!startOdometer) { return; }
     if (!vehicle) { return; }
+    const startOdo = parseFloat(startOdometer);
+    if (startOdo < (vehicle.current_odometer_km ?? 0)) {
+      Alert.alert("Hodômetro inválido", `O hodômetro inicial não pode ser menor que o atual do veículo (${(vehicle.current_odometer_km ?? 0).toFixed(0)} km).`);
+      return;
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setActionLoading(true);
@@ -276,10 +281,20 @@ export default function ShiftScreen() {
       ) : (
         <View style={{ gap: 16 }}>
           <View style={{ backgroundColor: "#1e293b", borderRadius: 12, padding: 16, gap: 4 }}>
-            <Text style={{ color: "#94a3b8", fontSize: 12 }}>TURNO ATIVO DESDE</Text>
-            <Text style={{ color: "#f8fafc", fontSize: 16, fontWeight: "600" }}>
-              {new Date(activeShift.started_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-            </Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <View>
+                <Text style={{ color: "#94a3b8", fontSize: 12 }}>TURNO ATIVO DESDE</Text>
+                <Text style={{ color: "#f8fafc", fontSize: 16, fontWeight: "600" }}>
+                  {new Date(activeShift.started_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </Text>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={{ color: "#94a3b8", fontSize: 10 }}>GANHOS NO TURNO</Text>
+                <Text style={{ color: "#22c55e", fontSize: 18, fontWeight: "800" }}>
+                  {todayTrips.reduce((s: number, t: Trip) => s + (t.fare_amount ?? 0), 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </Text>
+              </View>
+            </View>
             <Text style={{ color: "#64748b", fontSize: 12 }}>
               {todayTrips.length} viagem{todayTrips.length !== 1 ? "s" : ""} concluída{todayTrips.length !== 1 ? "s" : ""}
             </Text>
