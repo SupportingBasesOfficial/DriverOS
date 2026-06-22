@@ -54,6 +54,14 @@ export default function RefuelingAddScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const { data: veh } = await supabase.from("vehicles").select("current_odometer_km").eq("id", selectedVehicle).maybeSingle();
+    const currentOdo = (veh as { current_odometer_km: number } | null)?.current_odometer_km ?? 0;
+    if (odoNum < currentOdo) {
+      setLoading(false);
+      Alert.alert("Hodômetro inválido", `O hodômetro não pode ser menor que o atual (${currentOdo.toFixed(0)} km).`);
+      return;
+    }
+
     const { data: newRef, error } = await supabase.from("refuelings").insert({
       vehicle_id: selectedVehicle,
       user_id: user.id,
@@ -80,6 +88,7 @@ export default function RefuelingAddScreen() {
         }
       }
     }
+    await supabase.from("vehicles").update({ current_odometer_km: odoNum }).eq("id", selectedVehicle);
     setLoading(false);
     router.back();
   }

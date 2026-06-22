@@ -82,6 +82,7 @@ export default function DashboardScreen() {
   const [minBase, setMinBase]         = useState(0);
   const [minDebt, setMinDebt]         = useState(0);
   const [expensesExpanded, setExpensesExpanded] = useState(false);
+  const [todayTripsEarnings, setTodayTripsEarnings] = useState(0);
 
   useFocusEffect(useCallback(() => { load(); }, []));
 
@@ -121,6 +122,14 @@ export default function DashboardScreen() {
       setSnapshot(snap ?? null);
       setActiveShift(shift ?? null);
       setUserName((prof as { full_name?: string } | null)?.full_name?.split(" ")[0] ?? "");
+
+      const { data: trips } = await supabase.from("trips")
+        .select("fare_amount")
+        .eq("user_id", user.id)
+        .eq("status", "completed")
+        .gte("started_at", today)
+        .lt("started_at", new Date(now.getTime() + 86400000).toISOString().split("T")[0]);
+      setTodayTripsEarnings((trips ?? []).reduce((s: number, t: { fare_amount: number | null }) => s + (t.fare_amount ?? 0), 0));
 
       const agg = (rows: Snapshot[] | null): PeriodStats => ({
         earnings:  (rows ?? []).reduce((s: number, r: Snapshot) => s + (r.total_earnings ?? 0), 0),
@@ -197,10 +206,10 @@ export default function DashboardScreen() {
     );
   }
 
-  const todayE = snapshot?.total_earnings ?? 0;
+  const todayE = Math.max(snapshot?.total_earnings ?? 0, todayTripsEarnings);
   const todayX = snapshot?.total_expenses ?? 0;
-  const todayN = snapshot?.net_profit ?? 0;
-  const todayK = snapshot?.total_km ?? 0;
+  const todayN = todayE - todayX;
+  const todayK = Math.max(snapshot?.total_km ?? 0, 0);
   const shiftSince = activeShift
     ? new Date(activeShift.started_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
     : null;
@@ -274,8 +283,10 @@ export default function DashboardScreen() {
         </View>
       ) : null}
 
-      {minBase > 0 && ((() => {
-        const minToday = minBase + minDebt;
+      {(minBase > 0 || vehicleExpenses.length > 0) && ((() => {
+        const baseOnly = vehicleExpenses.reduce((s: number, e: Expense) => s + (e.installment_amount ?? e.amount) / (FREQ_DAYS[e.frequency] ?? 30), 0);
+        const effectiveBase = minBase > 0 ? minBase : baseOnly;
+        const minToday = effectiveBase + minDebt;
         const pct  = Math.min(1, minToday > 0 ? todayE / minToday : 0);
         const done = pct >= 1;
         return (
@@ -295,8 +306,10 @@ export default function DashboardScreen() {
             </View>
             <Text style={{ color: done ? "#22c55e" : "#64748b", fontSize: 10 }}>
               {done ? "✓ Contas do dia cobertas!" :
-               minDebt > 0 ? `Base ${fmt(minBase)} + acum. ${fmt(minDebt)} — faltam ${fmt(minToday - todayE)}` :
-               `${(pct * 100).toFixed(0)}% — faltam ${fmt(minToday - todayE)}`}
+               minDebt > 0 ? `Base ${fmt(effectiveBase)} + acum. ${fmt(minDebt)} — faltam ${fmt(minToday - todayE)}` :
+               minBase === 0 && vehicleExpenses.length > 0 ?
+                 `${(pct * 100).toFixed(0)}% — faltam ${fmt(minToday - todayE)} (adicione abastecimento para incluir combustível)` :
+                 `${(pct * 100).toFixed(0)}% — faltam ${fmt(minToday - todayE)}`}
             </Text>
           </View>
         );
@@ -316,30 +329,38 @@ export default function DashboardScreen() {
           <Text style={{ color: "#334155", fontSize: 10 }}>toque para detalhar</Text>
         </Pressable>
       </View>
-      {expensesExpanded && vehicleExpenses.length > 0 && (
+      {expensesExpanded && (
         <View style={{ backgroundColor: "#1e293b", borderRadius: 14, padding: 16, gap: 8,
           borderWidth: 1, borderColor: "#243044" }}>
           <Text style={{ color: "#64748b", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>
             DESPESAS RECORRENTES DO VEÍCULO
           </Text>
-          {Object.entries(
-            vehicleExpenses.reduce((acc: Record<string, number>, e) => {
-              acc[e.category] = (acc[e.category] ?? 0) + (e.installment_amount ?? e.amount);
-              return acc;
-            }, {})
-          ).map(([cat, val]) => (
-            <View key={cat} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: "#94a3b8", fontSize: 13 }}>{EXPENSE_CAT_LABEL[cat] ?? cat}</Text>
-              <Text style={{ color: "#f8fafc", fontSize: 13, fontWeight: "600" }}>{fmt(val as number)}</Text>
-            </View>
-          ))}
-          <View style={{ height: 1, backgroundColor: "#334155", marginVertical: 2 }} />
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "700" }}>Total mensal est.</Text>
-            <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "800" }}>
-              {fmt(vehicleExpenses.reduce((s, e) => s + (e.installment_amount ?? e.amount) / (FREQ_DAYS[e.frequency] ?? 30) * 30, 0))}
+          {vehicleExpenses.length === 0 ? (
+            <Text style={{ color: "#475569", fontSize: 13, textAlign: "center", paddingVertical: 8 }}>
+              📭 Nenhuma despesa cadastrada para este veículo.{"\n"}Toque em 💸 Despesa para adicionar.
             </Text>
-          </View>
+          ) : (
+            <>
+              {Object.entries(
+                vehicleExpenses.reduce((acc: Record<string, number>, e) => {
+                  acc[e.category] = (acc[e.category] ?? 0) + (e.installment_amount ?? e.amount);
+                  return acc;
+                }, {})
+              ).map(([cat, val]) => (
+                <View key={cat} style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: "#94a3b8", fontSize: 13 }}>{EXPENSE_CAT_LABEL[cat] ?? cat}</Text>
+                  <Text style={{ color: "#f8fafc", fontSize: 13, fontWeight: "600" }}>{fmt(val as number)}</Text>
+                </View>
+              ))}
+              <View style={{ height: 1, backgroundColor: "#334155", marginVertical: 2 }} />
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: "#94a3b8", fontSize: 12, fontWeight: "700" }}>Total mensal est.</Text>
+                <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "800" }}>
+                  {fmt(vehicleExpenses.reduce((s, e) => s + (e.installment_amount ?? e.amount) / (FREQ_DAYS[e.frequency] ?? 30) * 30, 0))}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
       )}
       <View style={{ flexDirection: "row", gap: 10 }}>

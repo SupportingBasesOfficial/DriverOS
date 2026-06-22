@@ -94,6 +94,10 @@ export default function ShiftScreen() {
   function endShift() {
     if (!activeShift) return;
     if (!endOdometer) { setEndError("Informe o hodômetro final."); return; }
+    const fin = parseFloat(endOdometer);
+    if (fin < (activeShift.initial_odometer_km ?? 0)) {
+      setEndError("Hodômetro final não pode ser menor que o inicial."); return;
+    }
     setEndError("");
     setConfirmEnd(true);
   }
@@ -104,11 +108,15 @@ export default function ShiftScreen() {
     setActionLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const finKm = parseFloat(endOdometer);
       await supabase.from("shifts").update({
         status: "completed",
         ended_at: new Date().toISOString(),
-        final_odometer_km: parseFloat(endOdometer),
+        final_odometer_km: finKm,
       }).eq("id", activeShift.id);
+      if (activeShift.vehicle_id) {
+        await supabase.from("vehicles").update({ current_odometer_km: finKm }).eq("id", activeShift.vehicle_id);
+      }
       if (user) {
         const today = new Date().toISOString().split("T")[0];
         await supabase.rpc("snapshot_daily_update", { p_user_id: user.id, p_date: today });

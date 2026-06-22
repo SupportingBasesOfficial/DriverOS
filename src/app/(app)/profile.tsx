@@ -125,6 +125,16 @@ export default function ProfileScreen() {
     ]);
   }
 
+  async function deactivateVehicle(vehicleId: string) {
+    Alert.alert("Desativar veículo", "Este veículo não será mais usado nos cálculos. Pode reativar depois.", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Desativar", style: "default", onPress: async () => {
+        await supabase.from("vehicles").update({ status: "inactive" as const }).eq("id", vehicleId);
+        loadData();
+      }},
+    ]);
+  }
+
   async function pickAndUploadPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -307,7 +317,13 @@ export default function ProfileScreen() {
                 )}
               </View>
               <View style={{ flexDirection: "row", gap: 8 }}>
-                {!isActive && (
+                {isActive ? (
+                  <Pressable onPress={() => deactivateVehicle(v.id)}
+                    style={{ flex: 1, backgroundColor: "#1e293b", borderRadius: 8, padding: 10, alignItems: "center",
+                      borderWidth: 1, borderColor: "#854d0e" }}>
+                    <Text style={{ color: "#f59e0b", fontSize: 12, fontWeight: "700" }}>⏸ Desativar</Text>
+                  </Pressable>
+                ) : (
                   <Pressable onPress={() => setActiveVehicle(v.id)}
                     style={{ flex: 1, backgroundColor: "#1d4ed8", borderRadius: 8, padding: 10, alignItems: "center" }}>
                     <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>⚡ Ativar</Text>
