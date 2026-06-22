@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import type { Tables } from "../../lib/database.types";
@@ -15,6 +15,9 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [saveMsg, setSaveMsg] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -35,24 +38,31 @@ export default function ProfileScreen() {
   }
 
   async function saveProfile() {
+    setSaveMsg("");
+    setSaveError("");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").upsert({
-      id: user.id,
-      full_name: name,
-      phone,
-    });
-    setSaving(false);
-    if (error) Alert.alert("Erro", error.message);
-    else Alert.alert("Salvo", "Perfil atualizado com sucesso.");
+    try {
+      const { error } = await supabase.from("profiles").upsert({ id: user.id, full_name: name, phone });
+      if (error) { setSaveError(error.message); console.error("[saveProfile]", error); }
+      else setSaveMsg("Perfil atualizado com sucesso.");
+    } catch (e) {
+      setSaveError("Erro inesperado.");
+      console.error("[saveProfile] exception", e);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function signOut() {
-    Alert.alert("Sair", "Deseja realmente sair?", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Sair", style: "destructive", onPress: () => supabase.auth.signOut() },
-    ]);
+    setLoggingOut(true);
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("[signOut]", e);
+      setLoggingOut(false);
+    }
   }
 
   if (loading) {
@@ -91,6 +101,8 @@ export default function ProfileScreen() {
           keyboardType="phone-pad"
           style={{ backgroundColor: "#1e293b", color: "#f8fafc", borderRadius: 12, padding: 16, fontSize: 16, borderWidth: 1, borderColor: "#334155" }}
         />
+        {saveError ? <Text style={{ color: "#ef4444", fontSize: 12, textAlign: "center" }}>{saveError}</Text> : null}
+        {saveMsg ? <Text style={{ color: "#22c55e", fontSize: 12, textAlign: "center" }}>{saveMsg}</Text> : null}
         <Pressable
           onPress={saveProfile}
           disabled={saving}
@@ -129,9 +141,12 @@ export default function ProfileScreen() {
 
       <Pressable
         onPress={signOut}
-        style={{ borderRadius: 12, padding: 14, alignItems: "center", borderWidth: 1, borderColor: "#7f1d1d", marginTop: 16 }}
+        disabled={loggingOut}
+        style={{ borderRadius: 12, padding: 14, alignItems: "center", borderWidth: 1, borderColor: "#7f1d1d", marginTop: 16, opacity: loggingOut ? 0.6 : 1 }}
       >
-        <Text style={{ color: "#ef4444", fontWeight: "600" }}>Sair da conta</Text>
+        {loggingOut
+          ? <ActivityIndicator color="#ef4444" />
+          : <Text style={{ color: "#ef4444", fontWeight: "600" }}>Sair da conta</Text>}
       </Pressable>
     </ScrollView>
   );
