@@ -10,7 +10,9 @@ type Vehicle = Tables<"vehicles">;
 type RideApp = Tables<"ride_apps">;
 type UserRideApp = Tables<"user_ride_apps">;
 
-const GOAL_KEY = "@driveros:daily_goal";
+const GOAL_KEY         = "@driveros:daily_goal";
+const WEEKLY_GOAL_KEY  = "@driveros:weekly_goal";
+const MONTHLY_GOAL_KEY = "@driveros:monthly_goal";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -25,8 +27,10 @@ export default function ProfileScreen() {
   const [saveMsg, setSaveMsg] = useState("");
   const [saveError, setSaveError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
-  const [dailyGoal, setDailyGoal] = useState("");
-  const [goalSaved, setGoalSaved] = useState(false);
+  const [dailyGoal, setDailyGoal]     = useState("");
+  const [weeklyGoal, setWeeklyGoal]   = useState("");
+  const [monthlyGoal, setMonthlyGoal] = useState("");
+  const [goalSaved, setGoalSaved]     = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => { loadData(); }, []);
@@ -35,12 +39,14 @@ export default function ProfileScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: p }, { data: v }, { data: apps }, { data: uApps }, goal] = await Promise.all([
+    const [{ data: p }, { data: v }, { data: apps }, { data: uApps }, dGoal, wGoal, mGoal] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-      supabase.from("vehicles").select("*").eq("user_id", user.id).eq("status", "active"),
+      supabase.from("vehicles").select("*").eq("user_id", user.id).order("created_at"),
       supabase.from("ride_apps").select("*").order("name"),
       supabase.from("user_ride_apps").select("*").eq("user_id", user.id),
       AsyncStorage.getItem(GOAL_KEY),
+      AsyncStorage.getItem(WEEKLY_GOAL_KEY),
+      AsyncStorage.getItem(MONTHLY_GOAL_KEY),
     ]);
 
     setProfile(p ?? null);
@@ -49,7 +55,9 @@ export default function ProfileScreen() {
     setUserApps(new Set(((uApps ?? []) as UserRideApp[]).map((ua) => ua.ride_app_id)));
     setName((p as Profile | null)?.full_name ?? "");
     setPhone((p as Profile | null)?.phone ?? "");
-    setDailyGoal(goal ?? "");
+    setDailyGoal(dGoal ?? "");
+    setWeeklyGoal(wGoal ?? "");
+    setMonthlyGoal(mGoal ?? "");
     setLoading(false);
   }
 
@@ -79,12 +87,38 @@ export default function ProfileScreen() {
     }
   }
 
-  async function saveGoal() {
-    const val = parseFloat(dailyGoal.replace(",", "."));
-    if (isNaN(val) || val <= 0) { Alert.alert("Valor inválido", "Informe um valor positivo."); return; }
-    await AsyncStorage.setItem(GOAL_KEY, val.toString());
+  async function saveGoals() {
+    const parseGoal = (s: string) => { const v = parseFloat(s.replace(",", ".")); return isNaN(v) || v <= 0 ? null : v; };
+    const d = parseGoal(dailyGoal);
+    const w = parseGoal(weeklyGoal);
+    const m = parseGoal(monthlyGoal);
+    if (!d && !w && !m) { Alert.alert("Informe ao menos uma meta positiva."); return; }
+    if (d) await AsyncStorage.setItem(GOAL_KEY, d.toString());
+    else await AsyncStorage.removeItem(GOAL_KEY);
+    if (w) await AsyncStorage.setItem(WEEKLY_GOAL_KEY, w.toString());
+    else await AsyncStorage.removeItem(WEEKLY_GOAL_KEY);
+    if (m) await AsyncStorage.setItem(MONTHLY_GOAL_KEY, m.toString());
+    else await AsyncStorage.removeItem(MONTHLY_GOAL_KEY);
     setGoalSaved(true);
-    setTimeout(() => setGoalSaved(false), 2000);
+    setTimeout(() => setGoalSaved(false), 2500);
+  }
+
+  async function setActiveVehicle(vehicleId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("vehicles").update({ status: "inactive" as const }).eq("user_id", user.id).eq("status", "active");
+    await supabase.from("vehicles").update({ status: "active" as const }).eq("id", vehicleId);
+    loadData();
+  }
+
+  async function deleteVehicle(vehicleId: string) {
+    Alert.alert("Excluir veículo", "Tem certeza? Esta ação não pode ser desfeita.", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Excluir", style: "destructive", onPress: async () => {
+        await supabase.from("vehicles").delete().eq("id", vehicleId);
+        loadData();
+      }},
+    ]);
   }
 
   async function sendPasswordReset() {
@@ -135,18 +169,21 @@ export default function ProfileScreen() {
         </Pressable>
       </View>
 
-      {/* Meta diária */}
-      <Text style={{ color: "#94a3b8", fontSize: 13, fontWeight: "600", marginTop: 4 }}>🎯 META DIÁRIA</Text>
-      <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-        <TextInput value={dailyGoal} onChangeText={setDailyGoal} placeholder="R$ 300,00" placeholderTextColor="#475569"
-          keyboardType="decimal-pad"
-          style={{ flex: 1, backgroundColor: "#1e293b", color: "#f8fafc", borderRadius: 12, padding: 14, fontSize: 16, borderWidth: 1, borderColor: "#334155" }} />
-        <Pressable onPress={saveGoal}
-          style={{ backgroundColor: goalSaved ? "#14532d" : "#1e293b", borderRadius: 12, padding: 14, alignItems: "center", borderWidth: 1, borderColor: goalSaved ? "#22c55e" : "#334155" }}>
-          <Text style={{ color: goalSaved ? "#22c55e" : "#3b82f6", fontWeight: "700" }}>{goalSaved ? "✓" : "Salvar"}</Text>
+      {/* Metas */}
+      <Text style={{ color: "#94a3b8", fontSize: 13, fontWeight: "600", marginTop: 4 }}>🎯 METAS DE GANHOS</Text>
+      <View style={{ gap: 8 }}>
+        <GoalInput label="🎯 Diária" value={dailyGoal} onChange={setDailyGoal} placeholder="Ex: 300" />
+        <GoalInput label="📅 Semanal" value={weeklyGoal} onChange={setWeeklyGoal} placeholder="Ex: 1800" />
+        <GoalInput label="📆 Mensal" value={monthlyGoal} onChange={setMonthlyGoal} placeholder="Ex: 7000" />
+        <Pressable onPress={saveGoals}
+          style={{ backgroundColor: goalSaved ? "#14532d" : "#1d4ed8", borderRadius: 12, padding: 14, alignItems: "center",
+            borderWidth: 1, borderColor: goalSaved ? "#22c55e" : "#3b82f6" }}>
+          <Text style={{ color: goalSaved ? "#22c55e" : "#fff", fontWeight: "700" }}>
+            {goalSaved ? "✓ Metas salvas!" : "Salvar metas"}
+          </Text>
         </Pressable>
       </View>
-      <Text style={{ color: "#475569", fontSize: 11 }}>Aparece como barra de progresso no Dashboard.</Text>
+      <Text style={{ color: "#475569", fontSize: 11 }}>Aparecem como barras de progresso no Dashboard.</Text>
 
       {/* Apps de corrida */}
       <Text style={{ color: "#94a3b8", fontSize: 13, fontWeight: "600", marginTop: 4 }}>APPS QUE USO</Text>
@@ -182,15 +219,39 @@ export default function ProfileScreen() {
           <Text style={{ color: "#3b82f6", marginTop: 8, fontWeight: "600" }}>Adicionar veículo</Text>
         </Pressable>
       ) : (
-        vehicles.map((v: Vehicle) => (
-          <View key={v.id} style={{ backgroundColor: "#1e293b", borderRadius: 12, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <Text style={{ fontSize: 24 }}>🚗</Text>
-            <View>
-              <Text style={{ color: "#f8fafc", fontWeight: "600" }}>{v.brand} {v.model} {v.year}</Text>
-              <Text style={{ color: "#94a3b8", fontSize: 12 }}>Placa: {v.plate} • {v.current_odometer_km.toFixed(0)} km</Text>
+        vehicles.map((v: Vehicle) => {
+          const isActive = v.status === "active";
+          return (
+            <View key={v.id} style={{ backgroundColor: isActive ? "#0f2040" : "#1e293b", borderRadius: 12, padding: 14, gap: 10,
+              borderWidth: 1, borderColor: isActive ? "#3b82f6" : "#334155" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Text style={{ fontSize: 24 }}>🚗</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#f8fafc", fontWeight: "700" }}>{v.brand} {v.model} {v.year}</Text>
+                  <Text style={{ color: "#94a3b8", fontSize: 12 }}>Placa: {v.plate} • {v.current_odometer_km.toFixed(0)} km</Text>
+                </View>
+                {isActive && (
+                  <View style={{ backgroundColor: "#14532d", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ color: "#22c55e", fontSize: 10, fontWeight: "700" }}>ATIVO</Text>
+                  </View>
+                )}
+              </View>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {!isActive && (
+                  <Pressable onPress={() => setActiveVehicle(v.id)}
+                    style={{ flex: 1, backgroundColor: "#1d4ed8", borderRadius: 8, padding: 10, alignItems: "center" }}>
+                    <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>⚡ Ativar</Text>
+                  </Pressable>
+                )}
+                <Pressable onPress={() => deleteVehicle(v.id)}
+                  style={{ flex: 1, backgroundColor: "#1e293b", borderRadius: 8, padding: 10, alignItems: "center",
+                    borderWidth: 1, borderColor: "#7f1d1d" }}>
+                  <Text style={{ color: "#ef4444", fontSize: 12, fontWeight: "600" }}>🗑 Excluir</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        ))
+          );
+        })
       )}
 
       {/* Segurança */}
@@ -209,5 +270,18 @@ export default function ProfileScreen() {
         {loggingOut ? <ActivityIndicator color="#ef4444" /> : <Text style={{ color: "#ef4444", fontWeight: "600" }}>Sair da conta</Text>}
       </Pressable>
     </ScrollView>
+  );
+}
+
+function GoalInput({ label, value, onChange, placeholder }:
+  { label: string; value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <Text style={{ color: "#94a3b8", fontSize: 12, width: 72 }}>{label}</Text>
+      <TextInput value={value} onChangeText={onChange} placeholder={placeholder}
+        placeholderTextColor="#475569" keyboardType="decimal-pad"
+        style={{ flex: 1, backgroundColor: "#0f172a", color: "#f8fafc", borderRadius: 10,
+          padding: 12, fontSize: 15, borderWidth: 1, borderColor: "#334155" }} />
+    </View>
   );
 }

@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import { supabase } from "../../lib/supabase";
 import type { Tables } from "../../lib/database.types";
@@ -343,7 +344,24 @@ export default function ShiftScreen() {
           </View>
         </View>
       )}
+
+      <HistoryLink />
     </ScrollView>
     </>
+  );
+}
+
+function HistoryLink() {
+  const router = useRouter();
+  return (
+    <Pressable
+      onPress={() => router.push("/(app)/history")}
+      style={{ margin: 16, marginTop: 8, backgroundColor: "#1e293b", borderRadius: 12, padding: 14,
+        flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+        borderWidth: 1, borderColor: "#334155" }}
+    >
+      <Text style={{ color: "#f8fafc", fontWeight: "600" }}>📋 Histórico de turnos</Text>
+      <Text style={{ color: "#3b82f6" }}>→</Text>
+    </Pressable>
   );
 }

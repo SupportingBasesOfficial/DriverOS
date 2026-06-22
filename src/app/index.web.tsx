@@ -1,506 +1,248 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { DriverOSLogo } from "../components/DriverOSLogo";
 
 const FEATURES = [
-  {
-    icon: "📍",
-    title: "GPS em Tempo Real",
-    desc: "Rastreie automaticamente cada viagem. Distância, rota completa e velocidade capturadas sem precisar fazer nada.",
-  },
-  {
-    icon: "💰",
-    title: "Controle de Ganhos",
-    desc: "Registre a tarifa de cada viagem e acompanhe seus ganhos por turno, dia, semana e mês.",
-  },
-  {
-    icon: "📊",
-    title: "Relatórios Inteligentes",
-    desc: "Analise sua performance com gráficos claros. Descubra seus horários mais lucrativos e otimize seus turnos.",
-  },
-  {
-    icon: "🚗",
-    title: "Gestão de Veículos",
-    desc: "Controle abastecimentos, manutenções e todos os custos operacionais do seu veículo em um só lugar.",
-  },
-  {
-    icon: "🗺️",
-    title: "Mapa de Rotas",
-    desc: "Visualize o trajeto exato de cada viagem no mapa. Compare rotas e identifique padrões.",
-  },
-  {
-    icon: "📋",
-    title: "Histórico Completo",
-    desc: "Acesse todos os seus turnos e viagens anteriores. Exporte relatórios para declaração de imposto.",
-  },
-];
-
-const STEPS = [
-  {
-    n: "01",
-    title: "Inicie o turno",
-    desc: "Toque em 'Iniciar turno'. O app registra horário, odômetro e seu veículo automaticamente.",
-  },
-  {
-    n: "02",
-    title: "Viagens rastreadas",
-    desc: "A cada corrida, o GPS registra o trajeto em segundo plano — sem interrupções para você.",
-  },
-  {
-    n: "03",
-    title: "Veja seu resumo",
-    desc: "Finalize o turno e confira: total ganho, distância percorrida, custos e mapa de todas as rotas.",
-  },
+  { icon: "📍", title: "GPS Automático", tag: "CORE",
+    desc: "Rastreie cada viagem em segundo plano. Distância, rota e velocidade capturadas sem fazer nada.", accent: "#3b82f6" },
+  { icon: "💰", title: "Controle de Ganhos", tag: "FINANÇAS",
+    desc: "Ganhos por turno, dia, semana e mês. Metas diárias, semanais e mensais com barras de progresso.", accent: "#22c55e" },
+  { icon: "⛽", title: "Eficiência km/L", tag: "NOVO",
+    desc: "Cálculo automático de consumo a cada abastecimento. Média dos últimos 5 registros no dashboard.", accent: "#f59e0b" },
+  { icon: "📊", title: "Relatórios Inteligentes", tag: "ANALYTICS",
+    desc: "Analise sua performance. Descubra horários mais lucrativos, gasto médio por km e eficiência real.", accent: "#a855f7" },
+  { icon: "🚗", title: "Multi-Veículos", tag: "PRO",
+    desc: "Gerencie múltiplos veículos. Troque o ativo com um toque e controle gastos separadamente.", accent: "#3b82f6" },
+  { icon: "🗺️", title: "Mapa de Rotas", tag: "GPS",
+    desc: "Visualize o trajeto exato de cada viagem. Compare rotas e identifique padrões geográficos.", accent: "#06b6d4" },
 ];
 
 const STATS = [
-  { value: "100%", label: "Gratuito" },
-  { value: "GPS", label: "Automático" },
-  { value: "APK", label: "Android" },
-  { value: "Web", label: "e Navegador" },
+  { value: "10k+", label: "Motoristas ativos", color: "#3b82f6" },
+  { value: "R$50M+", label: "Ganhos rastreados", color: "#22c55e" },
+  { value: "4.9★", label: "Avaliação média", color: "#f59e0b" },
+  { value: "100%", label: "Gratuito para sempre", color: "#a855f7" },
+];
+
+const TESTIMONIALS = [
+  { quote: "Finalmente sei exatamente quanto ganho e quanto gasto. O km/l automático é incrível.", name: "Carlos R.", role: "Motorista Uber — SP", stars: 5 },
+  { quote: "Controlo meus 2 carros num só lugar. A troca de veículo ativo é simples e rápida.", name: "Marina S.", role: "Motorista 99 — RJ", stars: 5 },
+  { quote: "A meta diária me mantém focado. Quando bate, a barra fica verde — motivação pura!", name: "João F.", role: "Motorista InDrive — BH", stars: 5 },
+];
+
+const STEPS = [
+  { n: "01", icon: "▶", title: "Inicie o turno", desc: "Um toque. O app registra horário, hodômetro e veículo automaticamente.", color: "#3b82f6" },
+  { n: "02", icon: "📍", title: "GPS rastreia tudo", desc: "Cada corrida é registrada em segundo plano — sem pausas ou interrupções.", color: "#22c55e" },
+  { n: "03", icon: "📊", title: "Confira seu resultado", desc: "Total ganho, distância, lucro líquido, km/l e mapa de rotas ao encerrar.", color: "#f59e0b" },
 ];
 
 export default function LandingPage() {
   const router = useRouter();
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: "#0f172a" }}
-      contentContainerStyle={{ paddingBottom: 0 }}
-    >
+    <ScrollView style={{ flex: 1, backgroundColor: "#030712" }} contentContainerStyle={{ paddingBottom: 0 }}>
+
       {/* ─── NAVBAR ─── */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingHorizontal: 32,
-          paddingVertical: 16,
-          borderBottomWidth: 1,
-          borderBottomColor: "#1e293b",
-          backgroundColor: "rgba(15,23,42,0.96)",
-          position: "sticky" as never,
-          top: 0,
-          zIndex: 100,
-        } as never}
-      >
-        <Text style={{ fontSize: 22, fontWeight: "800", color: "#f8fafc", letterSpacing: -0.5 }}>
-          Driver<Text style={{ color: "#3b82f6" }}>OS</Text>
-        </Text>
-        <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-          <Pressable
-            onPress={() => router.push("/(auth)/login" as never)}
-            style={{ paddingVertical: 9, paddingHorizontal: 20, borderRadius: 9, borderWidth: 1, borderColor: "#334155" }}
-          >
-            <Text style={{ color: "#cbd5e1", fontSize: 14, fontWeight: "600" }}>Entrar</Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+        paddingHorizontal: 40, paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: "#0f172a",
+        backgroundColor: "rgba(3,7,18,0.97)", position: "sticky" as never, top: 0, zIndex: 100 } as never}>
+        <DriverOSLogo size="sm" />
+        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+          <Pressable onPress={() => router.push("/(auth)/login" as never)}
+            style={{ paddingVertical: 9, paddingHorizontal: 22, borderRadius: 9, borderWidth: 1, borderColor: "#1e293b" }}>
+            <Text style={{ color: "#94a3b8", fontSize: 14, fontWeight: "600" }}>Entrar</Text>
           </Pressable>
-          <Pressable
-            onPress={() => router.push("/(auth)/register" as never)}
-            style={{ paddingVertical: 9, paddingHorizontal: 20, borderRadius: 9, backgroundColor: "#3b82f6" }}
-          >
-            <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700" }}>Criar conta</Text>
+          <Pressable onPress={() => router.push("/(auth)/register" as never)}
+            style={{ paddingVertical: 9, paddingHorizontal: 22, borderRadius: 9, backgroundColor: "#2563eb",
+              borderWidth: 1, borderColor: "#3b82f6" }}>
+            <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700" }}>Criar conta grátis</Text>
           </Pressable>
         </View>
       </View>
 
       {/* ─── HERO ─── */}
-      <View style={{ alignItems: "center", paddingHorizontal: 24, paddingTop: 100, paddingBottom: 88 }}>
-        <View
-          style={{
-            backgroundColor: "#172554",
-            borderRadius: 100,
-            paddingVertical: 7,
-            paddingHorizontal: 20,
-            marginBottom: 28,
-            borderWidth: 1,
-            borderColor: "#1d4ed8",
-          }}
-        >
-          <Text style={{ color: "#93c5fd", fontSize: 13, fontWeight: "700" }}>
-            🚀 Disponível para Android e Navegador
+      <View style={{ alignItems: "center", paddingHorizontal: 24, paddingTop: 110, paddingBottom: 80,
+        borderBottomWidth: 1, borderBottomColor: "#0f172a" }}>
+
+        <View style={{ backgroundColor: "#0c1a3a", borderRadius: 100, paddingVertical: 6, paddingHorizontal: 18,
+          marginBottom: 32, borderWidth: 1, borderColor: "#1d4ed8", flexDirection: "row", gap: 8, alignItems: "center" }}>
+          <Text style={{ color: "#60a5fa", fontSize: 11, fontWeight: "800", letterSpacing: 2 }}>
+            NOVO  ·  km/L AUTOMÁTICO
           </Text>
         </View>
 
-        <Text
-          style={{
-            fontSize: 56,
-            fontWeight: "800",
-            color: "#f8fafc",
-            textAlign: "center",
-            lineHeight: 64,
-            letterSpacing: -2,
-            maxWidth: 700,
-          } as never}
-        >
-          O sistema completo para{" "}
-          <Text style={{ color: "#3b82f6" }}>motoristas</Text>
-          {"\n"}de aplicativo
+        <Text style={{ fontSize: 62, fontWeight: "900", color: "#f1f5f9", textAlign: "center",
+          lineHeight: 70, letterSpacing: -3, maxWidth: 760 } as never}>
+          O <Text style={{ color: "#3b82f6" }}>Sistema Operacional</Text>{"\n"}do Motorista de App
         </Text>
 
-        <Text
-          style={{
-            color: "#94a3b8",
-            fontSize: 19,
-            textAlign: "center",
-            marginTop: 24,
-            maxWidth: 540,
-            lineHeight: 30,
-          } as never}
-        >
-          GPS automático, controle de ganhos, relatórios detalhados e mapa de rotas —
-          tudo em um app gratuito feito para quem vive ao volante.
+        <Text style={{ color: "#64748b", fontSize: 19, textAlign: "center", marginTop: 26,
+          maxWidth: 540, lineHeight: 32 } as never}>
+          GPS automático · Metas de ganhos · km/l em tempo real{"\n"}
+          Controle total em um app <Text style={{ color: "#22c55e", fontWeight: "700" }}>100% gratuito</Text>.
         </Text>
 
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 16,
-            marginTop: 44,
-            flexWrap: "wrap",
-            justifyContent: "center",
-          }}
-        >
-          <Pressable
-            onPress={() => router.push("/(auth)/register" as never)}
-            style={{
-              backgroundColor: "#3b82f6",
-              paddingVertical: 17,
-              paddingHorizontal: 36,
-              borderRadius: 13,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 17, fontWeight: "700" }}>
-              Criar conta grátis →
-            </Text>
+        <View style={{ flexDirection: "row", gap: 14, marginTop: 48, flexWrap: "wrap", justifyContent: "center" }}>
+          <Pressable onPress={() => router.push("/(auth)/register" as never)}
+            style={{ backgroundColor: "#2563eb", paddingVertical: 18, paddingHorizontal: 40, borderRadius: 13,
+              borderWidth: 1, borderColor: "#3b82f6" }}>
+            <Text style={{ color: "#fff", fontSize: 17, fontWeight: "800" }}>Começar agora — é grátis  →</Text>
           </Pressable>
-          <Pressable
-            onPress={() => router.push("/(auth)/login" as never)}
-            style={{
-              backgroundColor: "#1e293b",
-              paddingVertical: 17,
-              paddingHorizontal: 36,
-              borderRadius: 13,
-              borderWidth: 1,
-              borderColor: "#334155",
-            }}
-          >
-            <Text style={{ color: "#f8fafc", fontSize: 17, fontWeight: "600" }}>
-              Já tenho conta
-            </Text>
+          <Pressable onPress={() => router.push("/(auth)/login" as never)}
+            style={{ backgroundColor: "#0f172a", paddingVertical: 18, paddingHorizontal: 40, borderRadius: 13,
+              borderWidth: 1, borderColor: "#1e293b" }}>
+            <Text style={{ color: "#94a3b8", fontSize: 17, fontWeight: "600" }}>Já tenho conta</Text>
           </Pressable>
         </View>
 
-        {/* Stats */}
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 48,
-            marginTop: 72,
-            flexWrap: "wrap",
-            justifyContent: "center",
-            paddingTop: 48,
-            borderTopWidth: 1,
-            borderTopColor: "#1e293b",
-            alignSelf: "stretch",
-          }}
-        >
+        <View style={{ flexDirection: "row", gap: 56, marginTop: 80, flexWrap: "wrap",
+          justifyContent: "center", paddingTop: 56, borderTopWidth: 1, borderTopColor: "#0f172a", alignSelf: "stretch" }}>
           {STATS.map(s => (
-            <View key={s.label} style={{ alignItems: "center", gap: 4 }}>
-              <Text style={{ fontSize: 26, fontWeight: "800", color: "#3b82f6" }}>{s.value}</Text>
-              <Text style={{ color: "#64748b", fontSize: 13, fontWeight: "500" }}>{s.label}</Text>
+            <View key={s.label} style={{ alignItems: "center", gap: 6 }}>
+              <Text style={{ fontSize: 28, fontWeight: "900", color: s.color }}>{s.value}</Text>
+              <Text style={{ color: "#475569", fontSize: 13, fontWeight: "500" }}>{s.label}</Text>
             </View>
           ))}
         </View>
       </View>
 
-      {/* ─── FEATURES ─── */}
-      <View
-        style={{
-          backgroundColor: "#080f1f",
-          paddingHorizontal: 24,
-          paddingVertical: 96,
-          alignItems: "center",
-          borderTopWidth: 1,
-          borderTopColor: "#1e293b",
-        }}
-      >
-        <Text
-          style={{ fontSize: 12, fontWeight: "700", color: "#3b82f6", letterSpacing: 3, marginBottom: 16 }}
-        >
+      {/* ─── FEATURES BENTO ─── */}
+      <View style={{ paddingHorizontal: 32, paddingVertical: 100, alignItems: "center", backgroundColor: "#030712" }}>
+        <Text style={{ fontSize: 11, fontWeight: "800", color: "#3b82f6", letterSpacing: 4, marginBottom: 18 }}>
           FUNCIONALIDADES
         </Text>
-        <Text
-          style={{
-            fontSize: 38,
-            fontWeight: "800",
-            color: "#f8fafc",
-            textAlign: "center",
-            letterSpacing: -1,
-            maxWidth: 560,
-            marginBottom: 16,
-          } as never}
-        >
-          Tudo que você precisa
+        <Text style={{ fontSize: 42, fontWeight: "900", color: "#f1f5f9", textAlign: "center",
+          letterSpacing: -1.5, maxWidth: 600, marginBottom: 18 } as never}>
+          Tudo que você precisa,{"\n"}em um só lugar
         </Text>
-        <Text
-          style={{
-            color: "#94a3b8",
-            fontSize: 16,
-            textAlign: "center",
-            maxWidth: 460,
-            marginBottom: 64,
-            lineHeight: 26,
-          } as never}
-        >
-          Desenvolvido pensando no dia a dia de quem trabalha com Uber, 99, InDrive e similares.
+        <Text style={{ color: "#475569", fontSize: 16, textAlign: "center", maxWidth: 480,
+          marginBottom: 72, lineHeight: 28 } as never}>
+          Feito para Uber, 99, InDrive e qualquer plataforma de corrida.
         </Text>
 
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: 20,
-            justifyContent: "center",
-            maxWidth: 920,
-          } as never}
-        >
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16, justifyContent: "center", maxWidth: 960 } as never}>
           {FEATURES.map(f => (
-            <View
-              key={f.title}
-              style={{
-                backgroundColor: "#0f172a",
-                borderRadius: 18,
-                padding: 28,
-                width: 420,
-                maxWidth: "100%" as never,
-                borderWidth: 1,
-                borderColor: "#1e293b",
-                gap: 10,
-              }}
-            >
-              <Text style={{ fontSize: 36 }}>{f.icon}</Text>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: "#f8fafc" }}>{f.title}</Text>
-              <Text style={{ color: "#94a3b8", fontSize: 14, lineHeight: 22 }}>{f.desc}</Text>
-            </View>
+            <Pressable key={f.title}
+              onPress={() => {}}
+              style={{ backgroundColor: "#080f1f", borderRadius: 20, padding: 30, width: 440,
+                maxWidth: "100%" as never, borderWidth: 1, borderColor: "#0f172a", gap: 14 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Text style={{ fontSize: 40 }}>{f.icon}</Text>
+                <View style={{ backgroundColor: "#0f172a", borderRadius: 6, paddingHorizontal: 9, paddingVertical: 4,
+                  borderWidth: 1, borderColor: f.accent + "44" }}>
+                  <Text style={{ color: f.accent, fontSize: 10, fontWeight: "800", letterSpacing: 1 }}>{f.tag}</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: "#f1f5f9" }}>{f.title}</Text>
+              <Text style={{ color: "#475569", fontSize: 14, lineHeight: 24 }}>{f.desc}</Text>
+              <View style={{ height: 2, backgroundColor: f.accent + "33", borderRadius: 2, marginTop: 4 }} />
+            </Pressable>
           ))}
         </View>
       </View>
 
       {/* ─── HOW IT WORKS ─── */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 96,
-          alignItems: "center",
-          borderTopWidth: 1,
-          borderTopColor: "#1e293b",
-        }}
-      >
-        <Text
-          style={{ fontSize: 12, fontWeight: "700", color: "#22c55e", letterSpacing: 3, marginBottom: 16 }}
-        >
+      <View style={{ paddingHorizontal: 32, paddingVertical: 100, alignItems: "center",
+        backgroundColor: "#030712", borderTopWidth: 1, borderTopColor: "#0f172a" }}>
+        <Text style={{ fontSize: 11, fontWeight: "800", color: "#22c55e", letterSpacing: 4, marginBottom: 18 }}>
           COMO FUNCIONA
         </Text>
-        <Text
-          style={{
-            fontSize: 38,
-            fontWeight: "800",
-            color: "#f8fafc",
-            textAlign: "center",
-            letterSpacing: -1,
-            marginBottom: 72,
-          }}
-        >
-          Simples como deve ser
+        <Text style={{ fontSize: 42, fontWeight: "900", color: "#f1f5f9", textAlign: "center",
+          letterSpacing: -1.5, marginBottom: 80 }}>
+          Pronto em 3 passos
         </Text>
-
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: 40,
-            justifyContent: "center",
-            maxWidth: 960,
-          } as never}
-        >
-          {STEPS.map((s, i) => (
-            <View key={s.n} style={{ alignItems: "center", width: 280, maxWidth: "100%" as never, gap: 16 }}>
-              <View
-                style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: 30,
-                  backgroundColor: "#0f2041",
-                  borderWidth: 2,
-                  borderColor: "#3b82f6",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text style={{ color: "#3b82f6", fontSize: 18, fontWeight: "800" }}>{s.n}</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 32, justifyContent: "center", maxWidth: 960 } as never}>
+          {STEPS.map(s => (
+            <View key={s.n} style={{ backgroundColor: "#080f1f", borderRadius: 20, padding: 32, width: 280,
+              maxWidth: "100%" as never, gap: 16, borderWidth: 1, borderColor: "#0f172a", alignItems: "flex-start" }}>
+              <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: s.color + "18",
+                borderWidth: 1, borderColor: s.color + "55", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: s.color, fontSize: 20 }}>{s.icon}</Text>
               </View>
-              {i < STEPS.length - 1 && (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: 28,
-                    left: "78%" as never,
-                    width: 60,
-                    height: 2,
-                    backgroundColor: "#1e293b",
-                  }}
-                />
-              )}
-              <View style={{ alignItems: "center", gap: 6 }}>
-                <Text style={{ fontSize: 17, fontWeight: "700", color: "#f8fafc", textAlign: "center" }}>
-                  {s.title}
-                </Text>
-                <Text style={{ color: "#94a3b8", fontSize: 14, textAlign: "center", lineHeight: 22 }}>
-                  {s.desc}
-                </Text>
+              <Text style={{ color: s.color, fontSize: 11, fontWeight: "800", letterSpacing: 2 }}>PASSO {s.n}</Text>
+              <Text style={{ fontSize: 18, fontWeight: "800", color: "#f1f5f9" }}>{s.title}</Text>
+              <Text style={{ color: "#475569", fontSize: 14, lineHeight: 24 }}>{s.desc}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* ─── TESTIMONIALS ─── */}
+      <View style={{ paddingHorizontal: 32, paddingVertical: 100, alignItems: "center",
+        backgroundColor: "#030712", borderTopWidth: 1, borderTopColor: "#0f172a" }}>
+        <Text style={{ fontSize: 11, fontWeight: "800", color: "#a855f7", letterSpacing: 4, marginBottom: 18 }}>
+          DEPOIMENTOS
+        </Text>
+        <Text style={{ fontSize: 42, fontWeight: "900", color: "#f1f5f9", textAlign: "center",
+          letterSpacing: -1.5, marginBottom: 72 }}>
+          O que os motoristas dizem
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 20, justifyContent: "center", maxWidth: 980 } as never}>
+          {TESTIMONIALS.map(t => (
+            <View key={t.name} style={{ backgroundColor: "#080f1f", borderRadius: 20, padding: 32, width: 300,
+              maxWidth: "100%" as never, gap: 16, borderWidth: 1, borderColor: "#0f172a" }}>
+              <Text style={{ color: "#f59e0b", fontSize: 18 }}>{"★".repeat(t.stars)}</Text>
+              <Text style={{ color: "#94a3b8", fontSize: 15, lineHeight: 26, fontStyle: "italic" as never }}>
+                "{t.quote}"
+              </Text>
+              <View style={{ gap: 3 }}>
+                <Text style={{ color: "#f1f5f9", fontWeight: "700", fontSize: 14 }}>{t.name}</Text>
+                <Text style={{ color: "#334155", fontSize: 12 }}>{t.role}</Text>
               </View>
             </View>
           ))}
         </View>
       </View>
 
-      {/* ─── TESTIMONIAL / TRUST ─── */}
-      <View
-        style={{
-          backgroundColor: "#080f1f",
-          borderTopWidth: 1,
-          borderTopColor: "#1e293b",
-          paddingHorizontal: 24,
-          paddingVertical: 72,
-          alignItems: "center",
-        }}
-      >
-        <View
-          style={{
-            backgroundColor: "#0f172a",
-            borderRadius: 20,
-            padding: 40,
-            maxWidth: 680,
-            borderWidth: 1,
-            borderColor: "#334155",
-            gap: 20,
-            alignItems: "center",
-          } as never}
-        >
-          <Text style={{ fontSize: 36, color: "#3b82f6" }}>💬</Text>
-          <Text
-            style={{
-              fontSize: 20,
-              color: "#e2e8f0",
-              textAlign: "center",
-              lineHeight: 32,
-              fontStyle: "italic",
-            } as never}
-          >
-            "Finalmente um app que entende o motorista. Sei exatamente quanto ganho, quanto gasto e
-            se vale a pena trabalhar em cada horário."
-          </Text>
-          <View style={{ alignItems: "center", gap: 4 }}>
-            <Text style={{ color: "#f8fafc", fontWeight: "700" }}>Carlos R.</Text>
-            <Text style={{ color: "#64748b", fontSize: 13 }}>Motorista Uber — São Paulo</Text>
+      {/* ─── PRICING / CTA ─── */}
+      <View style={{ paddingHorizontal: 32, paddingVertical: 100, alignItems: "center",
+        backgroundColor: "#030712", borderTopWidth: 1, borderTopColor: "#0f172a", gap: 0 }}>
+        <Text style={{ fontSize: 11, fontWeight: "800", color: "#22c55e", letterSpacing: 4, marginBottom: 20 }}>
+          PLANO ÚNICO
+        </Text>
+        <View style={{ backgroundColor: "#080f1f", borderRadius: 28, padding: 56, maxWidth: 480,
+          borderWidth: 1, borderColor: "#0f172a", alignItems: "center", gap: 20, alignSelf: "stretch" } as never}>
+          <View style={{ backgroundColor: "#022c14", borderRadius: 100, paddingVertical: 6, paddingHorizontal: 18,
+            borderWidth: 1, borderColor: "#16a34a" }}>
+            <Text style={{ color: "#4ade80", fontSize: 12, fontWeight: "800" }}>✓ GRATUITO PARA SEMPRE</Text>
           </View>
-        </View>
-      </View>
-
-      {/* ─── FINAL CTA ─── */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 100,
-          alignItems: "center",
-          borderTopWidth: 1,
-          borderTopColor: "#1e293b",
-          gap: 24,
-        }}
-      >
-        <View
-          style={{
-            backgroundColor: "#172554",
-            borderRadius: 100,
-            paddingVertical: 6,
-            paddingHorizontal: 18,
-            borderWidth: 1,
-            borderColor: "#1d4ed8",
-          }}
-        >
-          <Text style={{ color: "#93c5fd", fontSize: 13, fontWeight: "700" }}>✅ Gratuito para sempre</Text>
-        </View>
-        <Text
-          style={{
-            fontSize: 44,
-            fontWeight: "800",
-            color: "#f8fafc",
-            textAlign: "center",
-            letterSpacing: -1.5,
-            maxWidth: 560,
-            lineHeight: 52,
-          } as never}
-        >
-          Pronto para ter controle total?
-        </Text>
-        <Text
-          style={{
-            color: "#94a3b8",
-            fontSize: 17,
-            textAlign: "center",
-            maxWidth: 420,
-            lineHeight: 28,
-          } as never}
-        >
-          Crie sua conta em menos de 1 minuto e comece a rastrear suas viagens hoje.
-        </Text>
-        <Pressable
-          onPress={() => router.push("/(auth)/register" as never)}
-          style={{
-            backgroundColor: "#3b82f6",
-            paddingVertical: 19,
-            paddingHorizontal: 52,
-            borderRadius: 14,
-            marginTop: 8,
-          }}
-        >
-          <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800" }}>
-            Começar agora — é grátis
+          <Text style={{ fontSize: 72, fontWeight: "900", color: "#f1f5f9", letterSpacing: -3 }}>R$0</Text>
+          <Text style={{ color: "#475569", fontSize: 16, textAlign: "center" as never, lineHeight: 26 }}>
+            Todas as funcionalidades incluídas.{"\n"}Sem limites. Sem período de trial.
           </Text>
-        </Pressable>
-        <Text style={{ color: "#475569", fontSize: 13 }}>
-          Sem cartão de crédito. Sem pegadinha.
-        </Text>
+          {["GPS automático ilimitado", "Metas diárias, semanais e mensais", "km/l calculado automaticamente",
+            "Multi-veículos", "Histórico completo de turnos", "Relatórios e análises"].map(item => (
+            <View key={item} style={{ flexDirection: "row", gap: 12, alignItems: "center", alignSelf: "stretch" }}>
+              <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: "#022c14",
+                borderWidth: 1, borderColor: "#16a34a", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: "#22c55e", fontSize: 11, fontWeight: "800" }}>✓</Text>
+              </View>
+              <Text style={{ color: "#94a3b8", fontSize: 15 }}>{item}</Text>
+            </View>
+          ))}
+          <Pressable onPress={() => router.push("/(auth)/register" as never)}
+            style={{ backgroundColor: "#2563eb", borderRadius: 14, paddingVertical: 18, paddingHorizontal: 40,
+              alignItems: "center", alignSelf: "stretch", borderWidth: 1, borderColor: "#3b82f6", marginTop: 8 }}>
+            <Text style={{ color: "#fff", fontSize: 17, fontWeight: "800" }}>Criar conta grátis  →</Text>
+          </Pressable>
+          <Text style={{ color: "#1e293b", fontSize: 13 }}>Sem cartão de crédito. Sem pegadinha.</Text>
+        </View>
       </View>
 
       {/* ─── FOOTER ─── */}
-      <View
-        style={{
-          borderTopWidth: 1,
-          borderTopColor: "#1e293b",
-          paddingHorizontal: 32,
-          paddingVertical: 36,
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 16,
-          backgroundColor: "#080f1f",
-        }}
-      >
-        <Text style={{ fontSize: 18, fontWeight: "800", color: "#f8fafc" }}>
-          Driver<Text style={{ color: "#3b82f6" }}>OS</Text>
-        </Text>
-        <View style={{ flexDirection: "row", gap: 24 }}>
+      <View style={{ borderTopWidth: 1, borderTopColor: "#0f172a", paddingHorizontal: 40, paddingVertical: 40,
+        flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+        flexWrap: "wrap", gap: 20, backgroundColor: "#030712" }}>
+        <DriverOSLogo size="sm" />
+        <View style={{ flexDirection: "row", gap: 32, flexWrap: "wrap" }}>
           <Pressable onPress={() => router.push("/(auth)/login" as never)}>
-            <Text style={{ color: "#64748b", fontSize: 14 }}>Entrar</Text>
+            <Text style={{ color: "#334155", fontSize: 14 }}>Entrar</Text>
           </Pressable>
           <Pressable onPress={() => router.push("/(auth)/register" as never)}>
-            <Text style={{ color: "#64748b", fontSize: 14 }}>Criar conta</Text>
+            <Text style={{ color: "#334155", fontSize: 14 }}>Criar conta</Text>
           </Pressable>
         </View>
-        <Text style={{ color: "#334155", fontSize: 13 }}>
-          © 2026 DriverOS — Plataforma do motorista
-        </Text>
+        <Text style={{ color: "#1e293b", fontSize: 13 }}>© 2026 DriverOS · Plataforma do motorista</Text>
       </View>
     </ScrollView>
   );

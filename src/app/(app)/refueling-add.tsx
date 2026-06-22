@@ -54,16 +54,33 @@ export default function RefuelingAddScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from("refuelings").insert({
+    const { data: newRef, error } = await supabase.from("refuelings").insert({
       vehicle_id: selectedVehicle,
       user_id: user.id,
       liters: litersNum,
       total_cost: costNum,
       odometer_km: odoNum,
       station_name: stationName.trim() || null,
-    });
+    }).select().single();
+    if (error) { setLoading(false); Alert.alert("Erro", error.message); return; }
+
+    if (newRef) {
+      const { data: prev } = await supabase.from("refuelings")
+        .select("odometer_km")
+        .eq("vehicle_id", selectedVehicle)
+        .lt("odometer_km", odoNum)
+        .order("odometer_km", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (prev) {
+        const kmSince = odoNum - (prev as { odometer_km: number }).odometer_km;
+        const kpl = kmSince / litersNum;
+        if (kpl > 0 && kpl < 50) {
+          await supabase.from("refuelings").update({ km_per_liter: parseFloat(kpl.toFixed(2)) }).eq("id", (newRef as { id: string }).id);
+        }
+      }
+    }
     setLoading(false);
-    if (error) { Alert.alert("Erro", error.message); return; }
     router.back();
   }
 

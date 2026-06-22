@@ -279,6 +279,7 @@ export type Database = {
           price_per_liter: number;
           station_name: string | null;
           odometer_km: number;
+          km_per_liter: number | null;
           created_at: string;
         };
         Insert: {
@@ -289,6 +290,7 @@ export type Database = {
           total_cost: number;
           station_name?: string | null;
           odometer_km: number;
+          km_per_liter?: number | null;
           created_at?: string;
         };
         Update: {
@@ -299,6 +301,7 @@ export type Database = {
           total_cost?: number;
           station_name?: string | null;
           odometer_km?: number;
+          km_per_liter?: number | null;
           created_at?: string;
         };
       };
