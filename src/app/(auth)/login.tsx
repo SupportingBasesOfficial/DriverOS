@@ -17,6 +17,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleLogin() {
     setErrorMsg("");
@@ -62,22 +63,31 @@ export default function LoginScreen() {
               borderColor: "#334155",
             }}
           />
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Senha"
-            placeholderTextColor="#475569"
-            secureTextEntry
-            style={{
-              backgroundColor: "#1e293b",
-              color: "#f8fafc",
-              borderRadius: 12,
-              padding: 16,
-              fontSize: 16,
-              borderWidth: 1,
-              borderColor: "#334155",
-            }}
-          />
+          <View style={{ position: "relative" }}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Senha"
+              placeholderTextColor="#475569"
+              secureTextEntry={!showPassword}
+              style={{
+                backgroundColor: "#1e293b",
+                color: "#f8fafc",
+                borderRadius: 12,
+                padding: 16,
+                paddingRight: 50,
+                fontSize: 16,
+                borderWidth: 1,
+                borderColor: "#334155",
+              }}
+            />
+            <Pressable
+              onPress={() => setShowPassword(v => !v)}
+              style={{ position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center" }}
+            >
+              <Text style={{ fontSize: 18 }}>{showPassword ? "🙈" : "👁"}</Text>
+            </Pressable>
+          </View>
 
           {errorMsg ? (
             <Text style={{ color: "#ef4444", fontSize: 13, textAlign: "center" }}>{errorMsg}</Text>
@@ -106,6 +116,12 @@ export default function LoginScreen() {
             <Text style={{ color: "#94a3b8" }}>Não tem conta?</Text>
             <Link href="/(auth)/register">
               <Text style={{ color: "#3b82f6", fontWeight: "600" }}>Criar conta</Text>
+            </Link>
+          </View>
+
+          <View style={{ alignItems: "center", marginTop: 8 }}>
+            <Link href="/(auth)/forgot-password">
+              <Text style={{ color: "#64748b", fontSize: 13 }}>Esqueci minha senha</Text>
             </Link>
           </View>
         </View>

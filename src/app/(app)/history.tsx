@@ -5,6 +5,37 @@ import { supabase } from "../../lib/supabase";
 import type { Tables } from "../../lib/database.types";
 
 type Shift = Tables<"shifts"> & { trips: Tables<"trips">[] };
+type FilterPeriod = "week" | "month" | "prev" | "all";
+
+const PERIOD_OPTS: { value: FilterPeriod; label: string }[] = [
+  { value: "week", label: "Semana" },
+  { value: "month", label: "Mês" },
+  { value: "prev", label: "Mês ant." },
+  { value: "all", label: "Tudo" },
+];
+
+function getPeriodRange(p: FilterPeriod): { start: string; end: string } | null {
+  if (p === "all") return null;
+  const now = new Date();
+  if (p === "week") {
+    const day = now.getDay();
+    const diff = (day === 0 ? -6 : 1 - day);
+    const start = new Date(now);
+    start.setDate(now.getDate() + diff);
+    start.setHours(0, 0, 0, 0);
+    return { start: start.toISOString(), end: now.toISOString() };
+  }
+  if (p === "month") {
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+      end: now.toISOString(),
+    };
+  }
+  return {
+    start: new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString(),
+    end: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString(),
+  };
+}
 
 const CATEGORY_LABEL: Record<Tables<"trips">["category"], string> = {
   passenger_pickup: "🛣️ Buscar",
@@ -77,52 +108,99 @@ function ShiftCard({ shift }: { shift: Shift }) {
 export default function HistoryScreen() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<FilterPeriod>("month");
 
   useEffect(() => {
-    async function load() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data, error } = await supabase
-          .from("shifts")
-          .select("*, trips(*)")
-          .eq("user_id", user.id)
-          .order("started_at", { ascending: false })
-          .limit(30);
-        if (error) console.error("[history]", error);
-        setShifts((data as Shift[]) ?? []);
-      } catch (e) {
-        console.error("[history] exception", e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+    load(period);
+  }, [period]);
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0f172a" }}>
-        <ActivityIndicator color="#3b82f6" />
-      </View>
-    );
+  async function load(p: FilterPeriod) {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const range = getPeriodRange(p);
+      let q = supabase
+        .from("shifts")
+        .select("*, trips(*)")
+        .eq("user_id", user.id)
+        .order("started_at", { ascending: false })
+        .limit(100);
+      if (range) q = q.gte("started_at", range.start).lte("started_at", range.end);
+      const { data, error } = await q;
+      if (error) console.error("[history]", error);
+      setShifts((data as Shift[]) ?? []);
+    } catch (e) {
+      console.error("[history] exception", e);
+    } finally {
+      setLoading(false);
+    }
   }
 
+  const totalEarnings = shifts.reduce(
+    (s: number, sh: Shift) => s + sh.trips.reduce((t: number, tr: Tables<"trips">) => t + (tr.fare_amount ?? 0), 0), 0
+  );
+  const totalKm = shifts.reduce((s: number, sh: Shift) => {
+    const fin = sh.final_odometer_km ?? 0;
+    const ini = sh.initial_odometer_km ?? 0;
+    return s + Math.max(0, fin - ini);
+  }, 0);
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
   return (
-    <View style={{ flex: 1, backgroundColor: "#0f172a", padding: 16 }}>
-      {shifts.length === 0 ? (
+    <View style={{ flex: 1, backgroundColor: "#0f172a" }}>
+      {/* Period filter */}
+      <View style={{ flexDirection: "row", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, gap: 8 }}>
+        {PERIOD_OPTS.map(p => (
+          <Pressable key={p.value} onPress={() => setPeriod(p.value)}
+            style={{ flex: 1, paddingVertical: 7, borderRadius: 20, alignItems: "center",
+              backgroundColor: period === p.value ? "#1d4ed8" : "#1e293b",
+              borderWidth: 1, borderColor: period === p.value ? "#3b82f6" : "#334155" }}>
+            <Text style={{ color: period === p.value ? "#fff" : "#94a3b8", fontSize: 11, fontWeight: "600" }}>
+              {p.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Period summary */}
+      {!loading && shifts.length > 0 && (
+        <View style={{ flexDirection: "row", marginHorizontal: 16, marginBottom: 8, backgroundColor: "#1e293b", borderRadius: 12, padding: 14, gap: 16 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ color: "#64748b", fontSize: 11 }}>Ganhos no período</Text>
+            <Text style={{ color: "#22c55e", fontWeight: "700", fontSize: 18 }}>{fmt(totalEarnings)}</Text>
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ color: "#64748b", fontSize: 11 }}>Turnos</Text>
+            <Text style={{ color: "#f8fafc", fontWeight: "700", fontSize: 18 }}>{shifts.length}</Text>
+          </View>
+          {totalKm > 0 && (
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: "#64748b", fontSize: 11 }}>Km rodados</Text>
+              <Text style={{ color: "#f8fafc", fontWeight: "700", fontSize: 18 }}>{totalKm.toFixed(0)}</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {loading ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color="#3b82f6" />
+        </View>
+      ) : shifts.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 8 }}>
           <Text style={{ fontSize: 40 }}>📋</Text>
           <Text style={{ color: "#94a3b8", textAlign: "center" }}>
-            Nenhum turno registrado ainda.{"\n"}Inicie seu primeiro turno na aba Turno.
+            Nenhum turno no período selecionado.
           </Text>
         </View>
       ) : (
         <FlatList
           data={shifts}
-          keyExtractor={s => s.id}
-          renderItem={({ item }) => <ShiftCard shift={item} />}
+          keyExtractor={(s: Shift) => s.id}
+          renderItem={({ item }: { item: Shift }) => <ShiftCard shift={item} />}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
         />
       )}
     </View>

@@ -20,6 +20,7 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleRegister() {
     setErrorMsg("");
@@ -94,22 +95,31 @@ export default function RegisterScreen() {
               borderColor: "#334155",
             }}
           />
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Senha (mín. 6 caracteres)"
-            placeholderTextColor="#475569"
-            secureTextEntry
-            style={{
-              backgroundColor: "#1e293b",
-              color: "#f8fafc",
-              borderRadius: 12,
-              padding: 16,
-              fontSize: 16,
-              borderWidth: 1,
-              borderColor: "#334155",
-            }}
-          />
+          <View style={{ position: "relative" }}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Senha (mín. 6 caracteres)"
+              placeholderTextColor="#475569"
+              secureTextEntry={!showPassword}
+              style={{
+                backgroundColor: "#1e293b",
+                color: "#f8fafc",
+                borderRadius: 12,
+                padding: 16,
+                paddingRight: 50,
+                fontSize: 16,
+                borderWidth: 1,
+                borderColor: "#334155",
+              }}
+            />
+            <Pressable
+              onPress={() => setShowPassword((v: boolean) => !v)}
+              style={{ position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center" }}
+            >
+              <Text style={{ fontSize: 18 }}>{showPassword ? "🙈" : "👁"}</Text>
+            </Pressable>
+          </View>
 
           {errorMsg ? (
             <Text style={{ color: "#ef4444", fontSize: 13, textAlign: "center" }}>{errorMsg}</Text>

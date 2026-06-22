@@ -45,6 +45,7 @@ export default function AppLayout() {
       <Tabs.Screen name="vehicle-add" options={{ href: null }} />
       <Tabs.Screen name="refueling-add" options={{ href: null }} />
       <Tabs.Screen name="maintenance-add" options={{ href: null }} />
+      <Tabs.Screen name="expense-add" options={{ href: null, headerShown: true, title: "Nova Despesa" }} />
       <Tabs.Screen
         name="profile"
         options={{
